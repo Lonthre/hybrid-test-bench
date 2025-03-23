@@ -1,4 +1,4 @@
-yafem-0.2.3-py3-none-any.whl
+yafem-0.2.6-py3-none-any.whl
 sympy
 numpy
 scipy
