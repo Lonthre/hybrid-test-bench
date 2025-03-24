@@ -3,8 +3,6 @@ This is a project of Engineering of Digital Twins course. Speficifally a Hybrid 
 
 ## 1. How to run
 
-my chsng
-
 In order to run the simulations you need to run the YaFEM in this repository (yafem-0.2.6). 
 
 **Run the following command:**
