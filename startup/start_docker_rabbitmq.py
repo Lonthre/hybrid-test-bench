@@ -8,7 +8,7 @@ containerName = "rabbitmq-server"
 
 def start_docker_rabbitmq():
     logFileName = "logs/rabbitmq.log"
-    dockerComposeDirectoryPath = resource_file_path("installation")
+    dockerComposeDirectoryPath = resource_file_path("installation/rabbitmqserver")
     sleepTimeBetweenAttempts = 1
     maxAttempts = 10
 

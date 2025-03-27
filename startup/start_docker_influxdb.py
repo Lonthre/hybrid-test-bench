@@ -1,15 +1,15 @@
-from incubator.config.config import resource_file_path
-from startup.utils import docker_service_starter as ds
+from startup.config import resource_file_path
+from startup import docker_service_starter as ds
 import requests
 
-from startup.utils.docker_service_starter import kill_container
+from startup.docker_service_starter import kill_container
 
 containerName = "influxdb-server"
 
 
 def start_docker_influxdb():
     logFileName = "logs/influxdb.log"
-    dockerComposeDirectoryPath = resource_file_path("digital_twin/data_access/influxdbserver")
+    dockerComposeDirectoryPath = resource_file_path("installation/influxdbserver")
     sleepTimeBetweenAttempts = 1
     maxAttempts = 10
 
