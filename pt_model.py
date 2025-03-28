@@ -275,22 +275,22 @@ class PtModel:
         beam3d_17_pars['nodal_labels'] = [10, 11]
 
         # add one beam3d element to the list
-        self.elements.append(beam3d(nodes, beam3d_1_pars))
-        self.elements.append(beam3d(nodes, beam3d_2_pars))
-        self.elements.append(beam3d(nodes, beam3d_3_pars))
-        self.elements.append(beam3d(nodes, beam3d_4_pars))
-        self.elements.append(beam3d(nodes, beam3d_6_pars))
-        self.elements.append(beam3d(nodes, beam3d_7_pars))
-        self.elements.append(beam3d(nodes, beam3d_8_pars))
-        self.elements.append(beam3d(nodes, beam3d_9_pars))
-        self.elements.append(beam3d(nodes, beam3d_10_pars))
-        self.elements.append(beam3d(nodes, beam3d_11_pars))
-        self.elements.append(beam3d(nodes, beam3d_12_pars))
-        self.elements.append(beam3d(nodes, beam3d_13_pars))
-        self.elements.append(beam3d(nodes, beam3d_14_pars))
-        self.elements.append(beam3d(nodes, beam3d_15_pars))
-        self.elements.append(beam3d(nodes, beam3d_16_pars))
-        self.elements.append(beam3d(nodes, beam3d_17_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_1_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_2_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_3_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_4_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_6_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_7_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_8_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_9_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_10_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_11_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_12_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_13_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_14_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_15_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_16_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_17_pars))
 
     # Step 5: Create the Finite Element Method model
     def _setup_model(self):
@@ -320,7 +320,7 @@ class PtModel:
     # Step 6: create and execute the simulation
     def run_simulation(self):
         simulation_pars = {}
-        sim = simulation(model, simulation_pars)
+        sim = simulation(self.model, simulation_pars)
 
         # [u, v, a, r] = simulation.dynamic_analysis()
         # perform static analysis (u: displacements, l: applied forces, r: restoring force)
