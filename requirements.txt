@@ -12,3 +12,5 @@ pipdeptree
 gmsh
 raschii
 openpyxl
+pyhocon
+docker
