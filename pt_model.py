@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from yafem.nodes import *
-from yafem.elem import *
-from yafem.model import *
-from yafem.simulation import *
 from math import *
+
+from yafem.elem import *
+from yafem.simulation import *
 
 _lb1 = 917.0  # length of the short beam [mm]
 _lb2 = 1786.0  # length of the long beam [mm]
