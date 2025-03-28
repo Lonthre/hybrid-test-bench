@@ -27,7 +27,7 @@ class PTEmulatorService:
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
         self._l = logging.getLogger("PTEmulatorService")
 
-        self._execution_interval = execution_interval
+        self._execution_interval = execution_interval # seconds
 
     def setup(self):
         self._rabbitmq.connect_to_server()
@@ -88,7 +88,6 @@ class PTEmulatorService:
     
 if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
-    # from software.config import load_config
     from pyhocon import ConfigFactory
     
     # Get path to the startup.conf file used in the hybrid test bench PT & DT:
