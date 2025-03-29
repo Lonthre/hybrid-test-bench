@@ -78,6 +78,8 @@ class PTEmulatorService:
             time_start = time.time()
             # Emulate the PT behavior
             self.emulate_pt() 
+            # Send the new state to the hybrid test bench physical twin
+            self.send_state(time_start)
             # Sleep until the next sample
             time_end = time.time()
             time_diff = time_end - time_start
