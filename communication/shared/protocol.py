@@ -7,7 +7,7 @@ ROUTING_KEY_UPDATE_CTRL_PARAMS = "hybridtestbench.update.open_loop_controller.pa
 ROUTING_KEY_UPDATE_CLOSED_CTRL_PARAMS = "hybridtestbench.update.closed_loop_controller.parameters"
 ROUTING_KEY_CONTROLLER = "hybridtestbench.record.controller.state"
 ROUTING_KEY_FORCES = "hybridtestbench.record.forces"
-ROUTING_KEY_RECORDER = "hybridtestbench.record.recorder"
+ROUTING_KEY_RECORDER = "hybridtestbench.record.#"
 
 def convert_str_to_bool(body):
     if body is None:
