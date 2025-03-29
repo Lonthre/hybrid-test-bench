@@ -67,8 +67,7 @@ if __name__ == "__main__":
     from pyhocon import ConfigFactory
 
     # Get logging configuration
-    logging_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench', 'logging.conf')
-    logging.config.fileConfig(logging_conf)
+    logging.config.fileConfig("logging.conf")
 
     # Get path to the startup.conf file used in the hybrid test bench PT & DT:
     startup_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench', 'software','startup.conf')
