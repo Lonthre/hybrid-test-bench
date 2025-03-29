@@ -92,6 +92,9 @@ if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
     from pyhocon import ConfigFactory
     
+    logging_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench','logging.conf')
+    logging.config.fileConfig(logging_conf)
+
     # Get path to the startup.conf file used in the hybrid test bench PT & DT:
     startup_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench', 'software','startup.conf')
     assert os.path.exists(startup_conf), 'startup.conf file not found'
