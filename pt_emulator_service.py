@@ -16,18 +16,24 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE,ROUTING_KEY_FORCES
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
 import pt_model as pt_model
 
 
 class PTEmulatorService:
     
-    def __init__(self, execution_interval, rabbitmq_config):
+    def __init__(self, execution_interval, uh_initial, uv_initial, lh_initial, lv_initial, rabbitmq_config):
 
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
         self._l = logging.getLogger("PTEmulatorService")
 
+        self.uh = uh_initial
+        self.uv = uv_initial
+        self.lh = lh_initial
+        self.lv = lv_initial
+        # self.r = r_initial # do we need this for the emulator?
         self._execution_interval = execution_interval # seconds
+        self._force_on = 0.0  
 
     def setup(self):
         self._rabbitmq.connect_to_server()
@@ -43,14 +49,46 @@ class PTEmulatorService:
             return msg["forces"]
         else:
             return None
+    
+    def check_control_commands(self):
+        # Check if there are control commands
+        force_cmd = self._read_forces()
+        if force_cmd is not None:
+            self._l.debug(f"Force command: on={force_cmd}")
+            self._force_on = 1.0 if force_cmd else 0.0
 
     def emulate_pt(self):
 
         # Call the main function or logic from the script
         model = pt_model.PtModel()
-        u, l, r = model.run_simulation()
+        u, lf, r = model.run_simulation()
 
         # Additional logic for the emulator can go here
+        # the if statement is just hardcoded emulator behaviour for now! 
+        # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
+        if self._force_on == 1.0:
+            # Horizontal displacement
+            self._uh = 10.0
+            # Vertical displacement
+            self._uv = 10.0
+            # Horizontal force
+            self._lh = 0.0
+            # Vertical force
+            self._lv = 0.0
+            # Restoring force
+            # self._r = r[something] # in case we need this for the emulator, we can put it here
+        else:
+            # Horizontal displacement
+            self._uh = 0.0
+            # Vertical displacement
+            self._uv = 0.0
+            # Horizontal force
+            self._lh = 0.0
+            # Vertical force
+            self._lv = 0.0
+            # Restoring force
+            # self._r = r[something] # in case we need this for the emulator, we can put it here
+
         self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -63,7 +101,14 @@ class PTEmulatorService:
                 "source": "emulator"
             },
             "fields": {
-                "id": 29 # Just hardcoded for now, but should be the id of the PT in the system.
+                "horizontal_displacement": self._uh,
+                "vertical_displacement": self._uv,
+                "horizontal_force": self._lh,
+                "vertical_force": self._lv,
+                # "restoring_force": self._r,
+                "force_on": self._force_on,
+                "execution_interval": self._execution_interval,
+                "elapsed": time.time() - time_start,
             }
         }
 
@@ -76,6 +121,8 @@ class PTEmulatorService:
         self._l.info("Starting PTEmulator emulation loop.")
         while True:
             time_start = time.time()
+            #Check if there are control commands
+            self.check_control_commands()
             # Emulate the PT behavior
             self.emulate_pt() 
             # Send the new state to the hybrid test bench physical twin
@@ -103,6 +150,11 @@ if __name__ == "__main__":
     config = ConfigFactory.parse_file(startup_conf)
     
     service = PTEmulatorService(
+        uh_initial = 0.0,
+        uv_initial = 0.0,
+        lh_initial = 0.0,
+        lv_initial = 0.0,
+        # r_initial = 0.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
