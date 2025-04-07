@@ -22,7 +22,7 @@ import pt_model as pt_model
 
 class PTEmulatorService:
     
-    def __init__(self, execution_interval, uh_initial, uv_initial, lh_initial, lv_initial, rabbitmq_config):
+    def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, execution_interval, rabbitmq_config):
 
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
         self._l = logging.getLogger("PTEmulatorService")
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
     from pyhocon import ConfigFactory
     
-    logging_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench','logging.conf')
+    logging_conf = os.path.join(os.path.dirname(os.getcwd()), 'hybrid-test-bench', 'logging.conf')
     logging.config.fileConfig(logging_conf)
 
     # Get path to the startup.conf file used in the hybrid test bench PT & DT:
