@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3 uid="uid://cyrbwh2fv6hyo"]
+
+[ext_resource type="PackedScene" uid="uid://caowihci75grt" path="res://assets/hybrid_test_bench.glb" id="1_vj8dy"]
+[ext_resource type="Script" uid="uid://bll5tppe7gra6" path="res://scenes/hybrid_test_bench.gd" id="2_pko7k"]
+
+[node name="HybridTestBench" instance=ExtResource("1_vj8dy")]
+script = ExtResource("2_pko7k")
