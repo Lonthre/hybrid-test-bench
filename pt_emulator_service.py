@@ -63,31 +63,27 @@ class PTEmulatorService:
         model = pt_model.PtModel()
         u, lf, r = model.run_simulation()
 
+
         # Additional logic for the emulator can go here
-        # the if statement is just hardcoded emulator behaviour for now! 
         # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             # Horizontal displacement
-            self._uh = 10.0
+            self._uh = u[model.get_dof1_horizontal(), :] # not in use currently
             # Vertical displacement
-            self._uv = 10.0
+            self._uv = u[model.get_dof1_vertical(), :]
             # Horizontal force
-            self._lh = 0.0
+            self._lh = lf[0, :] # not in use currently
             # Vertical force
-            self._lv = 0.0
+            self._lv = lf[0, :]
             # Restoring force
-            # self._r = r[something] # in case we need this for the emulator, we can put it here
-        else:
-            # Horizontal displacement
+            #self._r = r[?????] # in case we need this for the emulator, we can put it here
+        else: 
+            # If the force is off, set displacements and forces to zero
             self._uh = 0.0
-            # Vertical displacement
             self._uv = 0.0
-            # Horizontal force
             self._lh = 0.0
-            # Vertical force
             self._lv = 0.0
-            # Restoring force
-            # self._r = r[something] # in case we need this for the emulator, we can put it here
+            #self._r = 0.0 # in case we need this for the emulator, we can put it here
 
         self._l.info("PT script executed successfully.")
         
@@ -101,11 +97,11 @@ class PTEmulatorService:
                 "source": "emulator"
             },
             "fields": {
-                "horizontal_displacement": self._uh,
-                "vertical_displacement": self._uv,
-                "horizontal_force": self._lh,
-                "vertical_force": self._lv,
-                # "restoring_force": self._r,
+                "horizontal_displacement": float(np.mean(self._uh)) if isinstance(self._uh, (np.ndarray, list)) else float(self._uh),
+                "vertical_displacement": float(np.mean(self._uv)) if isinstance(self._uv, (np.ndarray, list)) else float(self._uv),
+                "horizontal_force": float(np.mean(self._lh)) if isinstance(self._lh, (np.ndarray, list)) else float(self._lh),
+                "vertical_force": float(np.mean(self._lv)) if isinstance(self._lv, (np.ndarray, list)) else float(self._lv),
+                # "restoring_force": self._r.tolist() if isinstance(self._r, np.ndarray) else self._r,
                 "force_on": self._force_on,
                 "execution_interval": self._execution_interval,
                 "elapsed": time.time() - time_start,
