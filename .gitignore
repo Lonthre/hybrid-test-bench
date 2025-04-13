@@ -174,3 +174,7 @@ cython_debug/
 .pypirc
 
 installation/influxdbserver/influxdb/engine
+
+# Godot 4+ specific ignores
+.godot/
+/android/
