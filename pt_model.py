@@ -359,3 +359,6 @@ class PtModel:
     
     def get_dof3_vertical(self):
         return self.find_dofs_indeces()[5]
+    
+    def get_fhs(self):
+        return fhs

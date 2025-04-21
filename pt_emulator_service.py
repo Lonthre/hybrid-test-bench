@@ -68,11 +68,11 @@ class PTEmulatorService:
         # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             # Horizontal displacement
-            self._uh = u[model.get_dof1_horizontal(), :] # not in use currently
+            self._uh = u[model.get_dof1_horizontal(), :]
             # Vertical displacement
             self._uv = u[model.get_dof1_vertical(), :]
             # Horizontal force
-            self._lh = lf[0, :] # not in use currently
+            self._lh = np.multiply(model.get_fhs(), 1)
             # Vertical force
             self._lv = lf[0, :]
             # Restoring force
@@ -97,10 +97,10 @@ class PTEmulatorService:
                 "source": "emulator"
             },
             "fields": {
-                "horizontal_displacement": float(np.mean(self._uh)) if isinstance(self._uh, (np.ndarray, list)) else float(self._uh),
-                "vertical_displacement": float(np.mean(self._uv)) if isinstance(self._uv, (np.ndarray, list)) else float(self._uv),
-                "horizontal_force": float(np.mean(self._lh)) if isinstance(self._lh, (np.ndarray, list)) else float(self._lh),
-                "vertical_force": float(np.mean(self._lv)) if isinstance(self._lv, (np.ndarray, list)) else float(self._lv),
+                "horizontal_displacement": float(self._uh[-1]) if isinstance(self._uh, (np.ndarray, list)) else float(self._uh),
+                "vertical_displacement": float(self._uv[-1]) if isinstance(self._uv, (np.ndarray, list)) else float(self._uv),
+                "horizontal_force": float(self._lh[-1]) if isinstance(self._lh, (np.ndarray, list)) else float(self._lh),
+                "vertical_force": float(self._lv[-1]) if isinstance(self._lv, (np.ndarray, list)) else float(self._lv),
                 # "restoring_force": self._r.tolist() if isinstance(self._r, np.ndarray) else self._r,
                 "force_on": self._force_on,
                 "execution_interval": self._execution_interval,
