@@ -325,3 +325,40 @@ class PtModel:
         # perform static analysis (u: displacements, l: applied forces, r: restoring force)
         u, l, r = sim.static_analysis()
         return u, l, r
+    
+    def find_dofs_indeces(self):
+        # Assuming node 10 has DOF 1 for horizontal displacement and DOF 2 for vertical displacement
+        node1_index = 10
+        node2_index = 11
+        node3_index = 9
+
+        # Find the DOF indices for nodes 9, 10 and 11
+        dof1_horizontal = self.model.find_dofs([[node1_index, 1]]).squeeze()
+        dof1_vertical = self.model.find_dofs([[node1_index, 3]]).squeeze()
+        dof2_horizontal = self.model.find_dofs([[node2_index, 1]]).squeeze()
+        dof2_vertical = self.model.find_dofs([[node2_index, 3]]).squeeze()
+        dof3_horizontal = self.model.find_dofs([[node3_index, 1]]).squeeze()
+        dof3_vertical = self.model.find_dofs([[node3_index, 3]]).squeeze()
+    
+        return dof1_horizontal, dof1_vertical, dof2_horizontal, dof2_vertical, dof3_horizontal, dof3_vertical
+
+    def get_dof1_horizontal(self):
+        return self.find_dofs_indeces()[0]
+    
+    def get_dof1_vertical(self):
+        return self.find_dofs_indeces()[1]
+    
+    def get_dof2_horizontal(self):  
+        return self.find_dofs_indeces()[2]
+    
+    def get_dof2_vertical(self):
+        return self.find_dofs_indeces()[3]
+    
+    def get_dof3_horizontal(self):
+        return self.find_dofs_indeces()[4]
+    
+    def get_dof3_vertical(self):
+        return self.find_dofs_indeces()[5]
+    
+    def get_fhs(self):
+        return fhs
