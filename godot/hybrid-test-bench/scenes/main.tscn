@@ -1,0 +1,41 @@
+[gd_scene load_steps=9 format=3 uid="uid://blytpvcaid4yk"]
+
+[ext_resource type="Script" uid="uid://dfguh1nf0u5iq" path="res://scripts/main.gd" id="1_q753v"]
+[ext_resource type="PackedScene" uid="uid://kc6frpl8rrh0" path="res://scenes/ui.tscn" id="3_hakmx"]
+[ext_resource type="PackedScene" uid="uid://cyrbwh2fv6hyo" path="res://scenes/hybrid_test_bench.tscn" id="3_sugp2"]
+[ext_resource type="Script" uid="uid://h6rfkobual8p" path="res://scripts/free_look_camera.gd" id="4_jyhfs"]
+[ext_resource type="Script" uid="uid://b72jlgxf70xpn" path="res://scripts/RabbitMQListener.cs" id="5_tbgi4"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jyhfs"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_tbgi4"]
+sky_material = SubResource("ProceduralSkyMaterial_jyhfs")
+
+[sub_resource type="Environment" id="Environment_tefeu"]
+background_mode = 2
+sky = SubResource("Sky_tbgi4")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_q753v")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_tefeu")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Ui" parent="." instance=ExtResource("3_hakmx")]
+
+[node name="HybridTestBench" parent="." instance=ExtResource("3_sugp2")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 2.72783, 1.05845, -0.785598)
+script = ExtResource("4_jyhfs")
+
+[node name="RabbitMQ" type="Node" parent="."]
+script = ExtResource("5_tbgi4")
