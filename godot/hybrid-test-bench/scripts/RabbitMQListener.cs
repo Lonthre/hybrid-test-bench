@@ -11,22 +11,20 @@ public partial class RabbitMQListener : Node
 	private IConnection connection;
 	private IModel channel;
 
-	private string exchangeName = "Incubator_AMQP";
-	private string ROUTING_KEY_KF_PLANT_STATE = "incubator.record.kalmanfilter.plant.state";
-	private string ROUTING_KEY_STATE = "incubator.record.driver.state";
+	private string exchangeName = "Bench_AMQP";
+	private string ROUTING_KEY_STATE = "hybridtestbench.record.driver.state";
 	private string localQueue;
 	private List<string> messages = new();
 
-	private string userName = "incubator";
+	private string userName = "bench";
 	private string hostName = "localhost";
-	private string password = "incubator";
+	private string password = "bench";
 	private string port = "5672";
 
 	[Signal]
 	public delegate void OnMessageEventHandler(string message);
 
-	public override void _Ready()
-	{
+	public override void _Ready() {
 		if (userName != "") {
 			factory.UserName = userName;
 			GD.Print("Host name set to: " + userName);
@@ -54,7 +52,6 @@ public partial class RabbitMQListener : Node
 		channel = connection.CreateModel();
 		
 		localQueue = channel.QueueDeclare(autoDelete: true, exclusive: true); 
-		channel.QueueBind(queue: localQueue, exchange: exchangeName, routingKey: ROUTING_KEY_KF_PLANT_STATE);
 		channel.QueueBind(queue: localQueue, exchange: exchangeName, routingKey: ROUTING_KEY_STATE);
 		ReceiveMessage();
 		
