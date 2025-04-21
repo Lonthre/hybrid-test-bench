@@ -2,14 +2,15 @@ class_name HybridTestBench
 extends Node3D
 
 
-func _ready() -> void:
-	pass
+var shiny_steel = preload("res://materials/shiny_steel.tres")
+var base_colour = null
 
-func _physics_process(delta: float) -> void:
-	pass
-	
-func _process(delta: float) -> void:
-	pass
-	
+
+func _ready() -> void:
+	base_colour = shiny_steel.albedo_color
+
 func move_actuator():
 	pass
+
+func change_actuator_colour():
+		shiny_steel.albedo_color = Color.LIGHT_CORAL
