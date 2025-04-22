@@ -1,9 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://blytpvcaid4yk"]
+[gd_scene load_steps=11 format=3 uid="uid://blytpvcaid4yk"]
 
 [ext_resource type="Script" uid="uid://dfguh1nf0u5iq" path="res://scripts/main.gd" id="1_q753v"]
 [ext_resource type="PackedScene" uid="uid://kc6frpl8rrh0" path="res://scenes/ui.tscn" id="3_hakmx"]
 [ext_resource type="PackedScene" uid="uid://cyrbwh2fv6hyo" path="res://scenes/hybrid_test_bench.tscn" id="3_sugp2"]
 [ext_resource type="Script" uid="uid://h6rfkobual8p" path="res://scripts/free_look_camera.gd" id="4_jyhfs"]
+[ext_resource type="Texture2D" uid="uid://dvvtp2alw2cbv" path="res://addons/kenney_prototype_textures/dark/texture_02.png" id="4_tefeu"]
 [ext_resource type="Script" uid="uid://b72jlgxf70xpn" path="res://scripts/RabbitMQListener.cs" id="5_tbgi4"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jyhfs"]
@@ -19,6 +20,10 @@ sky = SubResource("Sky_tbgi4")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o6xl0"]
+albedo_texture = ExtResource("4_tefeu")
+uv1_triplanar = true
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_q753v")
 
@@ -26,16 +31,22 @@ script = ExtResource("1_q753v")
 environment = SubResource("Environment_tefeu")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 2.44825, -4.28459)
 shadow_enabled = true
 
-[node name="Ui" parent="." instance=ExtResource("3_hakmx")]
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 2.734, 1, 0)
+script = ExtResource("4_jyhfs")
 
 [node name="HybridTestBench" parent="." instance=ExtResource("3_sugp2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.85)
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 2.72783, 1.05845, -0.785598)
-script = ExtResource("4_jyhfs")
+[node name="Ground" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00350702, -0.05, -0.00457048)
+material_override = SubResource("StandardMaterial3D_o6xl0")
+size = Vector3(10, 0.1, 10)
+
+[node name="UI" parent="." instance=ExtResource("3_hakmx")]
 
 [node name="RabbitMQ" type="Node" parent="."]
 script = ExtResource("5_tbgi4")
