@@ -97,10 +97,10 @@ class PTEmulatorService:
                 "source": "emulator"
             },
             "fields": {
-                "horizontal_displacement": float(self._uh[-1]) if isinstance(self._uh, (np.ndarray, list)) else float(self._uh),
-                "vertical_displacement": float(self._uv[-1]) if isinstance(self._uv, (np.ndarray, list)) else float(self._uv),
-                "horizontal_force": float(self._lh[-1]) if isinstance(self._lh, (np.ndarray, list)) else float(self._lh),
-                "vertical_force": float(self._lv[-1]) if isinstance(self._lv, (np.ndarray, list)) else float(self._lv),
+                "horizontal_displacement": float(np.max(self._uh)) if isinstance(self._uh, (np.ndarray, list)) else float(self._uh),
+                "vertical_displacement": float(np.max(self._uv)) if isinstance(self._uv, (np.ndarray, list)) else float(self._uv),
+                "horizontal_force": float(np.max(self._lh)) if isinstance(self._lh, (np.ndarray, list)) else float(self._lh),
+                "vertical_force": float(np.max(self._lv)) if isinstance(self._lv, (np.ndarray, list)) else float(self._lv),
                 # "restoring_force": self._r.tolist() if isinstance(self._r, np.ndarray) else self._r,
                 "force_on": self._force_on,
                 "execution_interval": self._execution_interval,
