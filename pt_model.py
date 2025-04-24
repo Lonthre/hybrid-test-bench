@@ -2,9 +2,18 @@
 # coding: utf-8
 
 from math import *
+import numpy as np
+
 
 from yafem.elem import *
 from yafem.simulation import *
+
+import logging
+import logging.config
+
+# Configure logging from the logging.conf file
+logging.config.fileConfig('logging.conf')
+
 
 _lb1 = 917.0  # length of the short beam [mm]
 _lb2 = 1786.0  # length of the long beam [mm]
@@ -48,39 +57,27 @@ _A3 = _b3 * _h3  # cross-section area [mm2]
 _Ixx3 = _b3 * _h3 ** 3 / 12  # moment of inertia about x-axis [mm4]
 _Iyy3 = _h3 * _b3 ** 3 / 12  # moment of inertia about y-axis [mm4]
 
-# parameters of the applied boundary conditions (displacements and forces)
-
-_t = 10  # We need to define t; for now it's 10. We're not sure what unit it uses, we're assuming that it's in seconds.
-# The problem is that 10 seconds is very little for displacement - it should be in the hundreds/thousands at least.
-
-_uv = 20.0
-# _uv * sin(4/pi * _t) # vertical displacement applied [mm]
-_fh = 100.0
-# fh * sin(2/pi * _t) # horizontal force applied [N]
-
-ts = np.linspace(0, _t, 21)
-
-uvs = []
-for t in ts:
-    uvs.append(_uv * sin(4 / pi * t))
-
-fhs = []
-for t in ts:
-    fhs.append(_fh * sin(2 / pi * t))
-
 
 class PtModel:
     def __init__(self):
+        self._l = logging.getLogger('PTModel')
+        self._l.debug("Initialising PT model...")
+
         self.nodes = None
         self.elements = []
         self.model = None
 
+        
         self._setup_nodes()
         self._setup_elements()
-        self._setup_model()
+        self.set_loads(10, 200, 20)
+        #self._setup_model()
+        
 
     # nodal parameters (x, y, z)
     def _setup_nodes(self):
+        self._l.debug("Setting up nodes.")
+
         nodes_pars = {
             'nodal_data': np.array([
                 [1, 0.0, 0.0, 0.0],
@@ -103,6 +100,7 @@ class PtModel:
 
     # Step 4: create the Finite Element Method elements
     def _setup_elements(self):
+        self._l.debug("Setting up elements.")
         # parameters of the element 1
         beam3d_1_pars = {}
         beam3d_1_pars['shape'] = 'generic'
@@ -293,11 +291,17 @@ class PtModel:
 
     # Step 5: Create the Finite Element Method model
     def _setup_model(self):
+        self._l.debug("Setting up model.")
+        assert self.nodes is not None, "Nodes are not initialized."
+        assert self.elements, "Elements are not initialized."
+
         # Model parameters
         # x - 1 (right)
         # y - 2 (inside)
         # z - 3 (up)
         # rotation around x axis - >4
+        uvs = self.uvs
+        fhs = self.fhs
 
         # dofs_c - Constrained degrees of freedom
         # dofs_f - Degrees of freedom subjected to force history
@@ -316,49 +320,63 @@ class PtModel:
         # Create the model
         self.model = model(self.nodes, self.elements, model_pars)
 
+
+
+    def set_loads(self, t, lv, lh):
+        self._l.debug("Setting loads. lv: %s, lh: %s", lv, lh)
+        # Set the loads for the model
+        # t - time [s]
+        # lv - vertical load [N]
+        # lh - horizontal load [N]
+
+        self._t = t # time [s]
+        
+        self._uv = lv
+        # _uv * sin(4/pi * _t) # vertical displacement applied [mm]
+        self._fh = lh
+        # fh * sin(2/pi * _t) # horizontal force applied [N]
+
+        ts = np.linspace(0, self._t, 21)
+
+        uvs = []
+        fhs = []
+
+        VERTICAL_FREQ = 4 / pi
+        HORIZONTAL_FREQ = 2 / pi
+
+        for time in ts:
+            uvs.append(self._uv * sin(VERTICAL_FREQ * time))
+            fhs.append(self._fh * sin(HORIZONTAL_FREQ * time))
+        self.uvs = uvs
+        self.fhs = fhs
+
+        self._setup_model()
+
+
+    def get_load(self):
+        self._l.debug("Getting load. lv: %s, lh: %s", self._uv, self._fh)
+        return self._uv, self._fh
+
+    def get_loads(self):
+        self._l.debug("Getting loads. uvs: %s, fhs: %s", self.uvs, self.fhs)
+        return self.uvs, self.fhs
+
+
     # Step 6: create and execute the simulation
     def run_simulation(self):
+        self._l.debug("Running simulation.")
+        
         simulation_pars = {}
+
         sim = simulation(self.model, simulation_pars)
+        try:
+            # [u, v, a, r] = simulation.dynamic_analysis()
+            # perform static analysis (u: displacements, l: applied forces, r: restoring force)
+            self._l.debug("Performing static analysis.")
 
-        # [u, v, a, r] = simulation.dynamic_analysis()
-        # perform static analysis (u: displacements, l: applied forces, r: restoring force)
-        u, l, r = sim.static_analysis()
+            u, l, r = sim.static_analysis()
+        except Exception as e:
+            self._l.error("Simulation failed: %s", e)
+            raise
+        self._l.debug("Simulation completed.")
         return u, l, r
-    
-    def find_dofs_indeces(self):
-        # Assuming node 10 has DOF 1 for horizontal displacement and DOF 2 for vertical displacement
-        node1_index = 10
-        node2_index = 11
-        node3_index = 9
-
-        # Find the DOF indices for nodes 9, 10 and 11
-        dof1_horizontal = self.model.find_dofs([[node1_index, 1]]).squeeze()
-        dof1_vertical = self.model.find_dofs([[node1_index, 3]]).squeeze()
-        dof2_horizontal = self.model.find_dofs([[node2_index, 1]]).squeeze()
-        dof2_vertical = self.model.find_dofs([[node2_index, 3]]).squeeze()
-        dof3_horizontal = self.model.find_dofs([[node3_index, 1]]).squeeze()
-        dof3_vertical = self.model.find_dofs([[node3_index, 3]]).squeeze()
-    
-        return dof1_horizontal, dof1_vertical, dof2_horizontal, dof2_vertical, dof3_horizontal, dof3_vertical
-
-    def get_dof1_horizontal(self):
-        return self.find_dofs_indeces()[0]
-    
-    def get_dof1_vertical(self):
-        return self.find_dofs_indeces()[1]
-    
-    def get_dof2_horizontal(self):  
-        return self.find_dofs_indeces()[2]
-    
-    def get_dof2_vertical(self):
-        return self.find_dofs_indeces()[3]
-    
-    def get_dof3_horizontal(self):
-        return self.find_dofs_indeces()[4]
-    
-    def get_dof3_vertical(self):
-        return self.find_dofs_indeces()[5]
-    
-    def get_fhs(self):
-        return fhs

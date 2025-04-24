@@ -1,4 +1,5 @@
 
+
 # Configure python path to load incubator modules
 import sys
 import os
@@ -32,11 +33,13 @@ sys.path.append(bench_startup_dir)
 
 from communication.shared.protocol import ROUTING_KEY_RECORDER
 from communication.server.rabbitmq import Rabbitmq
+import numpy as np
 
 class HybridTestBenchDataRecorderInflux:
     def __init__(self, rabbitmq_config, influxdb_config):
         self._l = logging.getLogger("HybridTestBenchDataRecorderInflux")
-        
+        self._l.info("Initializing HybridTestBenchDataRecorderInflux.")
+        self._l.info("Connecting to InfluxDB...")    
         client = InfluxDBClient(**influxdb_config)
         write_api = client.write_api(write_options=SYNCHRONOUS)
         self.write_api = write_api
@@ -48,15 +51,21 @@ class HybridTestBenchDataRecorderInflux:
     def read_record_request(self, ch, method, properties, body_json):
         self._l.debug("New record msg:")
         self._l.debug(body_json)
-        self.write_api.write(self.influxdb_bucket, self.influx_db_org, body_json)
+        try:
+            self.write_api.write(self.influxdb_bucket, self.influx_db_org, body_json)
+        except Exception as e:
+            self._l.error("Failed to write to InfluxDB: %s", e, exc_info=True)
+            raise
 
     def setup(self):
+        self._l.info("Setting up HybridTestBenchDataRecorderInflux.")
         self.rabbitmq.connect_to_server()
 
         self.rabbitmq.subscribe(routing_key=ROUTING_KEY_RECORDER,
                            on_message_callback=self.read_record_request)
 
     def start_recording(self):
+        self._l.info("Starting HybridTestBenchDataRecorderInflux.")
         try:
             self.rabbitmq.start_consuming()
         except KeyboardInterrupt:
