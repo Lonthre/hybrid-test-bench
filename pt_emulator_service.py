@@ -85,6 +85,7 @@ class PTEmulatorService:
         self.uv = uv_initial
         self.lh = lh_initial
         self.lv = lv_initial
+        self.max_vertical_displacement = 5.0
         self.lh_wanted = 100
         self.lv_wanted = 100
         self.VERTICAL_FREQ = 4 / (pi*60)
@@ -217,6 +218,7 @@ class PTEmulatorService:
                 "vertical_force": self._lv,
                 # "restoring_force": self._r,
                 "force_on": self._force_on,
+                "max_vertical_displacement": self.max_vertical_displacement,
                 "execution_interval": self._execution_interval,
                 "elapsed": time.time() - time_start,
             }
