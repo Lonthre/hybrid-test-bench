@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://kc6frpl8rrh0"]
+[gd_scene load_steps=2 format=3 uid="uid://cn3ny8jigjkt8"]
 
-[ext_resource type="Script" uid="uid://cib0pdugmsfxw" path="res://scripts/ui.gd" id="1_nt7q6"]
+[ext_resource type="Script" uid="uid://cib0pdugmsfxw" path="res://scripts/ui.gd" id="1_h5f8d"]
 
 [node name="Ui" type="Control"]
 layout_mode = 3
@@ -11,12 +11,12 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 6
 size_flags_vertical = 6
-script = ExtResource("1_nt7q6")
+script = ExtResource("1_h5f8d")
 
 [node name="ColorRect" type="ColorRect" parent="."]
 custom_minimum_size = Vector2(500, 200)
-layout_mode = 1
-offset_right = 300.0
+layout_mode = 2
+offset_right = 500.0
 offset_bottom = 200.0
 color = Color(0.490196, 0.490196, 0.490196, 0.490196)
 
@@ -30,86 +30,88 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="Rows" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="Column" type="VBoxContainer" parent="MarginContainer/Rows"]
 layout_mode = 2
-theme_override_constants/separation = 50
+theme_override_constants/separation = 10
 
-[node name="Text" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Title" type="Label" parent="MarginContainer/Rows/Column"]
+layout_mode = 2
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="MarginContainer/Rows/Column"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Vertical Force: "
+theme_override_constants/outline_size = 5
+text = "Vertical"
+horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="VerticalForce" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Value2" type="Label" parent="MarginContainer/Rows/Column"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/outline_size = 5
+text = "Horizontal"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Column2" type="VBoxContainer" parent="MarginContainer/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="MarginContainer/Rows/Column2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/outline_size = 5
+text = "Force [N]"
+vertical_alignment = 1
+
+[node name="VerticalForce" type="Label" parent="MarginContainer/Rows/Column2"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/outline_size = 5
 text = "N/A"
 horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="Unit" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "N"
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 50
-
-[node name="Text" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Horizontal Force: "
-
-[node name="HorizontalForce" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="HorizontalForce" type="Label" parent="MarginContainer/Rows/Column2"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+theme_override_constants/outline_size = 5
 text = "N/A"
 horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="Unit" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Column3" type="VBoxContainer" parent="MarginContainer/Rows"]
 layout_mode = 2
-text = "N"
+theme_override_constants/separation = 10
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 50
-
-[node name="Text" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Title" type="Label" parent="MarginContainer/Rows/Column3"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Vertical Displacement: "
+theme_override_constants/outline_size = 5
+text = "Displacement [mm]"
+vertical_alignment = 1
 
-[node name="VerticalDisplacement" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="VerticalDisplacement" type="Label" parent="MarginContainer/Rows/Column3"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
+theme_override_constants/outline_size = 5
 text = "N/A"
 horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="Unit" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer3"]
-layout_mode = 2
-text = "mm"
-
-[node name="HBoxContainer4" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 50
-
-[node name="Text" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer4"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Horizontal Displacement: "
-
-[node name="HorizontalDisplacement" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="HorizontalDisplacement" type="Label" parent="MarginContainer/Rows/Column3"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+theme_override_constants/outline_size = 5
 text = "N/A"
 horizontal_alignment = 2
-
-[node name="Unit" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer4"]
-layout_mode = 2
-text = "mm"
+vertical_alignment = 1
