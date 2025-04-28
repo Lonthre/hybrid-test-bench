@@ -25,5 +25,3 @@ func _on_message(message):
 	ui.update_horizontal_force(data.fields.horizontal_force)
 	ui.update_vertical_displacement(data.fields.vertical_displacement)
 	ui.update_horizontal_displacement(data.fields.horizontal_displacement)
-
-	hybrid_test_bench.move_indicator(data.fields.horizontal_displacement, data.fields.vertical_displacement)

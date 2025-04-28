@@ -20,10 +20,3 @@ material_override = ExtResource("4_k7r1q")
 
 [node name="HorizontalActuator" parent="." index="3"]
 material_override = ExtResource("4_k7r1q")
-
-[node name="CSGSphere3D" type="CSGSphere3D" parent="." index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0129163, 0.957558, -1.40237)
-visible = false
-radius = 0.1
-radial_segments = 24
-rings = 24
