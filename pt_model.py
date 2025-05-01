@@ -14,6 +14,9 @@ import logging.config
 # Configure logging from the logging.conf file
 logging.config.fileConfig('logging.conf')
 
+# Define the global variables for the model
+fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6
+
 
 _lb1 = 917.0  # length of the short beam [mm]
 _lb2 = 1786.0  # length of the long beam [mm]
@@ -66,12 +69,27 @@ class PtModel:
         self.nodes = None
         self.elements = []
         self.model = None
+        self.model_pars = dict()
+        
+        self._c = [[1, fx], [1, fy], [1, fz], [1, mx],
+                            [3, fy], [3, fz], [3, mx]]
+
+        self._f = []
+        self._fn = [[]]
+        self._fs = [[]]
+        self._u = []
+        self._un = [[]]
+        self._us = [[]]
 
         
         self._setup_nodes()
         self._setup_elements()
-        self.set_loads(10, 200, 20)
-        #self._setup_model()
+        self._setup_model()
+        self.run_simulation()
+
+
+        self.set_loads_between_nodes(0, 200, [9, 10])
+        self.set_displacements_between_nodes(0, 200, [5, 10])
         
 
     # nodal parameters (x, y, z)
@@ -300,83 +318,412 @@ class PtModel:
         # y - 2 (inside)
         # z - 3 (up)
         # rotation around x axis - >4
-        uvs = self.uvs
-        fhs = self.fhs
 
         # dofs_c - Constrained degrees of freedom
         # dofs_f - Degrees of freedom subjected to force history
         # dofs_u - Degrees of freedom subjected to displacement history (vertical dofs of node 2)
         # g_f - Force history (21 steps) - Ensure g_f is a 2D array with dimensions (2, 21)
         # g_u - Displacement history (21 steps) - Ensure  is a 2D array with dimensions (2, 21)
-        model_pars = {
-            'dofs_c': np.array([[1, 1], [1, 2], [1, 3], [1, 4],
-                                [3, 2], [3, 3], [3, 4]]),
-            'dofs_f': np.array([[9, 1], [10, 1]]),
-            'dofs_u': np.array([[5, 3], [10, 3]]),
-            'g_f': np.array([np.multiply(fhs, -1), np.multiply(fhs, 1)]),
-            'g_u': np.array([np.multiply(uvs, -0.1), np.multiply(uvs, 0.9)])
-        }
+        if self._c == [[]]:
+            self._l.error("Constraints are not set.")
+            raise ValueError("Constraints are not set.")
+        else:
+            self.model_pars['dofs_c'] = np.array(self._c) 
+        
+        if self._fn == [[]]:
+            self._l.info("Forces are not set.")
+            #raise ValueError("Forces are not set.")
+        else:
+            self.model_pars['dofs_f'] = np.array(self._fn)
+            self.model_pars['g_f'] = np.array(self._fs)
+        
+        if self._un == [[]]:
+            self._l.info("Displacements are not set.")
+            #raise ValueError("Displacements are not set.")
+        else:
+            self.model_pars['dofs_u'] = np.array(self._un)
+            self.model_pars['g_u'] = np.array(self._us)
 
         # Create the model
-        self.model = model(self.nodes, self.elements, model_pars)
+        self.model = model(self.nodes, self.elements, self.model_pars)
 
+    def clear_constraints(self):
+        self._l.debug("Clearing constraints.")
+        # Clear the constraints for the model
+        # Set the constraints for the model
+        # t - time [s]
+        # u - displacement [mm]
+        mp = model.extract_pars()
+        self._l.debug("Extracting model parameters. %s", mp)
+        self.model.dofs_c = 0
+        self._c = np.zeros((self.nodes.n_nodes, 3))
 
+    def set_constraints(self, t, nodes, direction):
+        self._l.debug("Setting constraints. t: %s, nodes: %s, direction: %s", t, nodes, direction)
+        # Set the constraints for the model
+        # t - time [s]
+        # u - displacement [mm]
+        i, n = np.shape(nodes)
+        for _i in range(i):
+            self._c[nodes, direction] = 0.0
 
-    def set_loads(self, t, lv, lh):
-        self._l.debug("Setting loads. lv: %s, lh: %s", lv, lh)
+        #self._setup_model()
+
+    def get_constraints(self, nodes, direction):
+        self._l.debug("Getting constraints. nodes: %s, direction: %s", nodes, direction)
+        # Get the constraints for the model
+        # t - time [s]
+        # u - displacement [mm]
+        return self._c[nodes, direction]
+    
+    def clear_displacement(self, node, direction):
+        #Clear the load for the model
+        self._l.debug("Clearing displacement. node: %s, direction: %s", node, direction)
+        if direction == 0:
+            for d in range(3):
+                U_idx = np.where((node == np.array(self._un)[:, 0]) & (d+1 == np.array(self._un)[:, 1]))[0] 
+
+                self._u = np.delete(self._u, U_idx[0])
+                self._un = np.delete(self._un, U_idx[0])
+                self._us = np.delete(self._us, U_idx[0])
+        else:
+            U_idx = np.where((node == np.array(self._un)[:, 0]) & (direction == np.array(self._un)[:, 1]))[0] 
+            self._u = np.delete(self._u, U_idx[0])
+            self._un = np.delete(self._un, U_idx[0])
+            self._us = np.delete(self._us, U_idx[0])
+
+    def clear_displacements(self):
+        self._l.debug("Clearing displacements.")
+        # Clear the displacements for the model
+        
+        self._u = []
+        self._un = [[]]
+        self._us = [[]]
+
+        #self._setup_model()
+
+    def set_displacements(self, t, u, nodes, direction):
+        self._l.debug("Setting displacements. t: %s, u: %s", t, u)
+        i = np.shape(nodes)[0]
+
+        # Set the displacements for the model
+        
+        if np.shape(u) == np.shape(nodes) == np.shape(direction):
+            self._l.debug("Setting displacements. t: %s, l: %s, node: %s, direction: %s", t, u, nodes, direction)
+            for _i in range(i):
+                node = [nodes[_i], direction[_i]]
+                if np.array_equal(self._un, [[0, 0]]):
+                    self._un[0] = node
+                U_idx = np.where((node[0] == np.array(self._un)[:, 0]) & (node[1] == np.array(self._un)[:, 1]))[0] 
+                self._l.debug("Finding idx. %s, %s", U_idx, len([U_idx]))
+
+                if len(U_idx) == 0:
+                    self._u.append(u[_i])
+                    self._un.append(node)
+                    self._us.append([0, u[_i]])
+                else:
+                    self._u[U_idx[0]] = u[_i]
+                    self._us[U_idx[0]] = [0, self._u[U_idx[0]]]
+        else:
+            self._l.error("Displacement, node and direction shape mismatch. Displacement shape: %s, Node shape: %s, Direction shape: %s", np.shape(u), np.shape(nodes), np.shape(direction))
+            raise ValueError("Displacement, node and direction shape mismatch. Displacement shape: %s, Node shape: %s, Direction shape: %s" % (np.shape(u), np.shape(nodes), np.shape(direction)))
+
+        #self._setup_model()
+
+    def set_displacements_between_nodes(self, t, U, nodes):
+        self._l.debug("Setting displacements between nodes. t: %s, u: %s, nodes: %s", t, U, nodes)
+        # Set the displacements for the model
+        # t - time [s]
+        # u - displacement [mm]
+        if len(np.shape(nodes)) == 1:
+            U = [U]
+            nodes = [nodes]
+
+        i, n = np.shape(nodes)
+        ulok = [0,0,0]
+
+        if np.shape(U)[0] == np.shape(nodes)[0] and n == 2:
+        
+            for _i in range(i):
+                node = nodes[_i]
+                node1 = node[0]
+                node2 = node[1]
+                BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
+                if len(BTW_idx) == 0:
+                    F = 1 # default force [N]
+                else:
+                    F = self.BTW_f[BTW_idx[0]] # force [N]
+                    L0, L1, delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
+                    F = 1 if delta_l == 0 else np.multiply(F, np.divide(U,delta_l)) # scale force [N]
+                    if isnan(F):
+                        self._l.info("Force is NaN. %s", F)
+                        F = 1 # default force [N]
+                    self._l.debug("Force. %s", F)
+                try:
+                    self.set_loads_between_nodes(1, F, nodes[_i])
+                except Exception as e:
+                    self._l.error("Error setting loads between nodes: %s", e)
+                    raise
+
+        else:
+            self._l.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s", np.shape(U), np.shape(nodes))
+            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(U), np.shape(nodes)))
+        
+        #self._l.debug("Displacement between nodes. %s", nodes)
+        #self._setup_model()
+
+    def get_displacement(self, nodes, direction):
+        self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
+        # Get the displacements for the model
+        
+        if isinstance(nodes, int):
+            nodes = [nodes]
+            direction = [direction]
+
+        us = []
+        i = np.shape(nodes)[0]
+
+        if np.shape(nodes) == np.shape(direction):
+            for _i in range(i):
+                node = nodes[_i]
+                d = direction[_i]
+                dof = self.model.find_dofs([[node, d]]).squeeze()
+                #self._l.debug("Finding dof. %s, %s", dof, self.u[dof,1])
+                us.append(self.u[dof, 1]) # local displacement [mm]
+        else:
+            self._l.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
+            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
+        
+        self._l.debug("Displacement: %s", us)
+        return us
+    
+    def get_displacement_between_nodes(self, node1, node2):
+        self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
+        # Get the displacements for the model
+        
+        ulok = [0,0,0]
+
+        BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
+        xyz1 = self.model.my_nodes.nodal_coords[node1-1]
+        xyz2 = self.model.my_nodes.nodal_coords[node2-1]
+        L0 = sqrt((xyz1[0] - xyz2[0])**2 + (xyz1[1] - xyz2[1])**2 + (xyz1[2] - xyz2[2])**2) # length [mm]
+        for d in range(3):
+            dof1 = self.model.find_dofs([[node1, d+1]]).squeeze()
+            dof2 = self.model.find_dofs([[node2, d+1]]).squeeze()
+            ulok[d] = self.u[dof1, 1] - self.u[dof2, 1] # local displacement [mm]
+            L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0])**2 + (xyz1[1] - xyz2[1] + ulok[1])**2 + (xyz1[2] - xyz2[2] + ulok[2])**2) # length [mm]
+            delta_l = L1 - L0 # deltaL [mm]
+        
+        self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
+        return L0, L1, delta_l
+
+    
+    def get_displacements(self):
+        # Get the displacements for the model
+        self._l.debug("Getting displacements: %s", self._u)
+        return self._u
+    
+    def clear_load(self, node, direction):
+        #Clear the load for the model
+        self._l.debug("Clearing load. node: %s, direction: %s", node, direction)
+        if direction == 0:
+            for d in range(3):
+                F_idx = np.where((node == np.array(self._fn)[:, 0]) & (d+1 == np.array(self._fn)[:, 1]))[0] 
+
+                self._f = np.delete(self._f, F_idx[0])
+                self._fn = np.delete(self._fn, F_idx[0])
+                self._fs = np.delete(self._fs, F_idx[0])
+        else:
+            F_idx = np.where((node == np.array(self._fn)[:, 0]) & (direction == np.array(self._fn)[:, 1]))[0] 
+            self._f = np.delete(self._f, F_idx[0])
+            self._fn = np.delete(self._fn, F_idx[0])
+            self._fs = np.delete(self._fs, F_idx[0])
+    
+    def clear_loads(self):
+        # Clear the loads for the model
+        self._l.debug("Clearing loads.")
+        
+        self._f = []
+        self._fn = [[]]
+        self._fs = [[]]
+
+        #self._setup_model()
+
+    def set_loads(self, t, f, nodes, direction):
+        self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
+        i = np.shape(nodes)[0]
+
+        F_idx = []
+
+        # Set the loads for the model
+        
+        if np.shape(f) == np.shape(nodes) == np.shape(direction):
+            for _i in range(i):
+                if f[_i] == 0:
+                    self._l.debug("Skipping load. %s, %s, %s", f[_i], nodes[_i], direction[_i])
+                else:
+                    #self._l.debug("Setting loads. %s, %s, %s", f[_i], nodes[_i], direction[_i])
+                    node = [nodes[_i], direction[_i]]
+                    if self._fn == [[]]:
+                        #self._l.debug("Setting first load. %s = %s", node, self._fn)
+                        self._f.append(f[_i])
+                        self._fn[0] = node
+                        self._fs[0] = [0, f[_i]]
+                    #else:
+                        #self._l.debug("Finding idx. Node[0]: %s = %s & Node[1]: %s = %s", node[0], self._fn, node[1], self._fs)
+                    F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
+                    #self._l.debug("Finding idx. %s, %s", F_idx, len([F_idx]))
+
+                    if len(F_idx) == 0:
+                        self._f.append(f[_i])
+                        self._fn.append(node)
+                        self._fs.append([0, f[_i]])
+                        #self._l.debug("Setting new load. %s = %s", len(self._f), f[_i])
+                        #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
+                        #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
+                        #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fn), self._fs)
+                    else:
+                        self._f[F_idx[0]] = f[_i]
+                        self._fs[F_idx[0]] = [0, self._f[F_idx[0]]]
+                        #self._l.debug("Setting existing load. %s = %s", F_idx[0], self._f[_i])
+                        #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
+                        #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
+                        #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fs), self._fs)
+
+                
+        else:
+            self._l.error("Load, node and direction shape mismatch. Load shape: %s, Node shape: %s, Direction shape: %s", np.shape(f), np.shape(nodes), np.shape(direction))
+            raise ValueError("Load, node and direction shape mismatch. Load shape: %s, Node shape: %s, Direction shape: %s" % (np.shape(f), np.shape(nodes), np.shape(direction)))
+
+        #self._setup_model()
+
+    def set_loads_between_nodes(self, t, F, nodes):
+        self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
         # Set the loads for the model
         # t - time [s]
-        # lv - vertical load [N]
-        # lh - horizontal load [N]
+        # F - force [N]
+        # nodes - nodes [1, 2] - node 1 and node 2
 
-        self._t = t # time [s]
+        if not hasattr(self, 'BTW'):
+            # Initialize the lists if they don't exist
+            self.BTW = []
+            self.BTW_f = []
+            BTW_idx = []
+
+        if isinstance(F, list):
+            # If F is a list, convert it to a numpy array
+            self._l.debug("F is a list. %s", F)
+
+        else:
+            # If F is an int, convert it to a numpy array
+            self._l.debug("F is not a list. %s", F)
+            F = [F]
+            nodes = [nodes]
+
+
+        i, n = np.shape(nodes)
+        llok = [0,0,0]
+        flok = [0,0,0]
+
+        #Set the loads for the model...
+
+        if np.shape(F)[0] == np.shape(nodes)[0] and n == 2:
         
-        self._uv = lv
-        # _uv * sin(4/pi * _t) # vertical displacement applied [mm]
-        self._fh = lh
-        # fh * sin(2/pi * _t) # horizontal force applied [N]
+            for _i in range(i):
+                node = nodes[_i]
+                # Check if the node is already in the list of nodes
+                if not len(self.BTW) == 0: 
+                    node1 = node[0]
+                    node2 = node[1]
+                    BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
+                if len(BTW_idx) == 0:
+                    self.BTW.append(node)
+                    self.BTW_f.append(F[_i])
+                else:
+                    self.BTW[BTW_idx[0]] = node
+                    self.BTW_f[BTW_idx[0]] = F[_i]
 
-        ts = np.linspace(0, self._t, 21)
+                xyz1 = self.model.my_nodes.nodal_coords[node[0]-1]
+                xyz2 = self.model.my_nodes.nodal_coords[node[1]-1]
+                
+                for d in range(3):
+                    try:
+                        dof1 = self.model.find_dofs([[node[0], 1 + d]]).squeeze()
+                        dof2 = self.model.find_dofs([[node[1], 1 + d]]).squeeze()
+                        
+                    except Exception as e:
+                        self._l.error("Error finding dof: %s", e)
+                        raise
+                    llok[d] = (xyz1[d] + self.u[dof1,0]) - (xyz2[d] + self.u[dof2,0]) # deltaL [mm]
+                    
+                l_f = sqrt(llok[0]**2 + llok[1]**2 + llok[2]**2) # displacement [mm]
 
-        uvs = []
-        fhs = []
+                for d in range(3):
+                    # Set Loads for the model
+                    flok[d] = float(np.multiply(F, np.divide(llok[d] , l_f))) # load [N]
+                    self.set_loads(1, [flok[d],-flok[d]], nodes[_i], [d+1,d+1])
+            
+                    
+                    
+                    
+        else:
+            self._l.error("Loads and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(F), np.shape(nodes))
+            raise ValueError("Loads and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(F), np.shape(nodes)))
 
-        VERTICAL_FREQ = 4 / pi
-        HORIZONTAL_FREQ = 2 / pi
+        self._l.debug("Loads between nodes: %s", self.BTW)
+        #self._setup_model()
 
-        for time in ts:
-            uvs.append(self._uv * sin(VERTICAL_FREQ * time))
-            fhs.append(self._fh * sin(HORIZONTAL_FREQ * time))
-        self.uvs = uvs
-        self.fhs = fhs
+    def get_load(self, nodes, direction):
+        self._l.debug("Getting loads. nodes: %s, direction: %s", nodes, direction)
+        # Get the load for the model]
+        if isinstance(nodes, int):
+            nodes = [nodes]
+            direction = [direction]
+        fs = []
+        i = np.shape(nodes)[0]
 
-        self._setup_model()
-
-
-    def get_load(self):
-        self._l.debug("Getting load. lv: %s, lh: %s", self._uv, self._fh)
-        return self._uv, self._fh
+        if np.shape(nodes) == np.shape(direction):
+            for _i in range(i):
+                node = [nodes[_i], direction[_i]]
+                F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
+                if self._f[F_idx[0]] is None:
+                    #self._l.error("Load is not set.")
+                    fs.append(0.0)
+                    #raise ValueError("Load is not set.")
+                else:
+                    #self._l.debug("Load is set. %s", self._f[nodes[_i], direction[_i]])
+                    fs.append(self._f[F_idx[0]])
+        else:
+            self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
+            raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
+        self._l.debug("Loads: %s", fs)
+        return fs
 
     def get_loads(self):
-        self._l.debug("Getting loads. uvs: %s, fhs: %s", self.uvs, self.fhs)
-        return self.uvs, self.fhs
+        self._l.debug("Getting loads: %s", self._l)
+        return self._f
 
 
     # Step 6: create and execute the simulation
     def run_simulation(self):
         self._l.debug("Running simulation.")
+
+        self._setup_model()
         
         simulation_pars = {}
 
         sim = simulation(self.model, simulation_pars)
+        self._l.debug("Simulation parameters: %s, %s", self.model, simulation_pars)
         try:
             # [u, v, a, r] = simulation.dynamic_analysis()
             # perform static analysis (u: displacements, l: applied forces, r: restoring force)
             self._l.debug("Performing static analysis.")
 
-            u, l, r = sim.static_analysis()
+            self.u, self.l, self.r = sim.static_analysis()
+            #self._l.debug("Static analysis completed. %s, %s, %s", self.u, self.l, self.r)
+
         except Exception as e:
             self._l.error("Simulation failed: %s", e)
             raise
         self._l.debug("Simulation completed.")
-        return u, l, r
+        return self.u, self.l, self.r

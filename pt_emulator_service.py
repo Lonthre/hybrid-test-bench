@@ -22,6 +22,9 @@ from communication.server.rabbitmq import Rabbitmq
 from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
 import pt_model as pt_model
 
+# Define the global variables for the model
+fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6 # force and moment indices
+
 # Define the system of ODEs for the bench
 def bench_ODE(t, y, s0, omega, v_max, a_max):
     """
@@ -59,9 +62,19 @@ def bench_ODE(t, y, s0, omega, v_max, a_max):
         
     a_target = a_target * scale + (v_target - v)
 
+    if abs(s) >= s0:   
+        a_target = -(abs(s) - s0) if s > 0 else (abs(s) - s0)
+
+    if s > 0:
+        a_max_pos = +a_max
+        a_max_neg = -a_max * 2.0
+    else:
+        a_max_pos = +a_max * 2.0
+        a_max_neg = -a_max
+
     # Clip acceleration to a_max
     v = np.clip(v, -v_max, v_max)
-    a = np.clip(a_target, -a_max, a_max)
+    a = np.clip(a_target, a_max_neg, a_max_pos)
 
     return [v, a]
 
@@ -69,7 +82,7 @@ def bench_ODE(t, y, s0, omega, v_max, a_max):
 class PTEmulatorService:
     
     def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, execution_interval, rabbitmq_config):
-
+        # Initialize the PTEmulatorService with initial values and configuration
         self._l = logging.getLogger("PTEmulatorService")
         self._l.info("Initializing PTEmulatorService.")
 
@@ -87,10 +100,10 @@ class PTEmulatorService:
         self.lv = lv_initial
         self.max_vertical_displacement = 5.0
         self.lh_wanted = 100
-        self.lv_wanted = 100
-        self.VERTICAL_FREQ = 4 / (pi*60)
-        self.HORIZONTAL_FREQ = 2 / (pi*60)
-        self.VERTICAL_V_Max = self.lv_wanted * self.VERTICAL_FREQ
+        self.uv_wanted = 100
+        self.VERTICAL_FREQ = (2*pi/60) / 4
+        self.HORIZONTAL_FREQ = (2*pi/60) / 2
+        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ
         self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ
         self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ
         self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ
@@ -105,27 +118,50 @@ class PTEmulatorService:
 
         # Declare local queues for the force messages
         self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_FORCES)
+        #self.load_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_LOADS)
+        #self.displacement_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DISPLACEMENTS)
 
         self._l.info(f"PTEmulatorService setup complete.")
 
     def _read_forces(self):
+        # Read the forces from the RabbitMQ queue
+        #self._l.debug("Reading forces from RabbitMQ.")
         msg = self._rabbitmq.get_message(self.forces_queue_name)
+        #self._l.debug(f"Message received: {msg}")
         if msg is not None:
-            return msg["forces"]
+            return msg
         else:
             return None
     
     def check_control_commands(self):
         # Check if there are control commands
         force_cmd = self._read_forces()
+        #self._l.debug(f"Control command: {force_cmd}")
         if force_cmd is not None:
-            self._l.debug(f"Force command: on={force_cmd}")
-            self._force_on = 1.0 if force_cmd else 0.0
+            if 'forces' in force_cmd and force_cmd['forces'] is not None:
+                self._l.info("Force command: %s", force_cmd["forces"])
+                self._force_on = 1.0 if force_cmd else 0.0
+
+            if "horizontal_force" in force_cmd and force_cmd["horizontal_force"] is not None:
+                self._l.info(f"Horizontal force command: {force_cmd['horizontal_force']}")
+                self.lh_wanted = force_cmd["horizontal_force"]
+
+            if "vertical_displacement" in force_cmd and force_cmd["vertical_displacement"] is not None:
+                self._l.info(f"Vertical force command: {force_cmd['vertical_displacement']}")
+                self.uv_wanted = force_cmd["vertical_displacement"]
+                
+            if "vertical_frequency" in force_cmd and force_cmd["vertical_frequency"] is not None:
+                self._l.info(f"Vertical frequency command: {force_cmd['vertical_frequency']}")
+                self.set_vertical_frequency(force_cmd["vertical_frequency"])
+                
+            if "horizontal_frequency" in force_cmd and force_cmd["horizontal_frequency"] is not None:
+                self._l.info(f"Horizontal frequency command: {force_cmd['horizontal_frequency']}")
+                self.set_horizontal_frequency(force_cmd["horizontal_frequency"])
 
 
     def emulate_pt(self):
         # Emulate the PT behavior based on the control commands
-        self._l.info("Emulating.")
+        #self._l.info("Emulating.")
         state = [self._force_on, self.lh, self.lv, self.uh, self.uv] # Current state of the PTEmulator
         #self._l.info(f"Current state: {state}")
 
@@ -133,7 +169,7 @@ class PTEmulatorService:
         # the if statement is just hardcoded emulator behaviour for now! 
         # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
-            self._l.info("Force is on, setting displacements and forces from simulation results.")
+            #self._l.info("Force is on, setting displacements and forces from simulation results.")
             # Horizontal displacement
 
             #Run the ODE solver for the horizontal and vertical motion
@@ -143,7 +179,7 @@ class PTEmulatorService:
                 self._l.error("ODE solver failed: %s", e, exc_info=True)
                 raise
 
-            self._l.info("Running simulation...")
+            #self._l.info("Running simulation...")
             try:
                 [u, lf, r] = self.PT_Model.run_simulation()
             except Exception as e:
@@ -152,30 +188,25 @@ class PTEmulatorService:
             #self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
 
             node10_index = 10
-
-            #self._l.debug(f"Finding dof for node: {node10_index}")
-            dof10_horizontal = self.PT_Model.model.find_dofs([[node10_index, 1]]).squeeze()
-            dof10_vertical = self.PT_Model.model.find_dofs([[node10_index, 3]]).squeeze()
-            #self._l.debug(f"Node 10 dof: {dof10_horizontal}, {dof10_vertical}")
-
+            
+            # Horizontal displacement
             try:
-                self._uh = float(u[dof10_horizontal, 1])
+                self._uh = float(self.PT_Model.get_displacement(node10_index, fx)[0])
             except IndexError as e:
-                self._l.error(f"Error retrieving horizontal displacement from u({dof10_horizontal},1): %s", e, exc_info=True)
+                self._l.error(f"Error retrieving horizontal displacement from u({node10_index},1): %s", e, exc_info=True)
 
             # Vertical displacement
             try:
-                self._uv = float(u[dof10_vertical, 1])
+                self._uv = float(self.PT_Model.get_displacement(node10_index, fz)[0])
             except IndexError as e:
-                self._l.error(f"Error retrieving vertical displacement from u({dof10_vertical},1): %s", e, exc_info=True)
+                self._l.error(f"Error retrieving vertical displacement from u({node10_index},1): %s", e, exc_info=True)
             
             #Forces
             try:
-                [lv, lh] = self.PT_Model.get_load() 
-                # Horizontal force
-                self._lv = float(lv) 
                 # Vertical force
-                self._lh = float(lh)
+                self._lh = float(self.PT_Model.get_load(node10_index, fx)[0])
+                # Horizontal force
+                self._lv = float(self.PT_Model.get_load(node10_index, fz)[0])
             except Exception as e:
                 self._l.error(f"Error retrieving forces from PT_Model.get_loads(): %s", e, exc_info=True)
                 self._l.error(f"Forces not set: lh = {self._lh}, lv = {self._lv}")
@@ -187,7 +218,7 @@ class PTEmulatorService:
             
             # self._r = r[something] # in case we need this for the emulator, we can put it here
         else:
-            self._l.info("Force is off, setting displacements and forces to zero.")
+            #self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
             self._uh = 0.0
             # Vertical displacement
@@ -199,7 +230,7 @@ class PTEmulatorService:
             # Restoring force
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
-        self._l.info("PT script executed successfully.")
+        #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
         #self._l.info("Sending state to hybrid test bench physical twin.")
@@ -225,8 +256,8 @@ class PTEmulatorService:
         }
 
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
-        self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
-        self._l.debug(message)
+        #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
+        #self._l.debug(message)
     
     def start_emulation(self):
         # Start the emulation loop
@@ -254,48 +285,53 @@ class PTEmulatorService:
             self._l.error("Emulation loop failed: %s", e, exc_info=True)
 
     def run_ODE(self):
-        state_v = [self._S_bench_v, self._V_bench_v] # Current state of the PTEmulator
         #self._l.info(f"Current state vertical: {state_v}")
-
-        try:
-            sol_v = solve_ivp(
-                lambda t, y: bench_ODE(t, y, self.lv_wanted, self.VERTICAL_FREQ, self.VERTICAL_V_Max, self.VERTICAL_A_Max),
-                [0.0, self._execution_interval], state_v, t_eval=np.linspace(0.0, self._execution_interval, 2))
-        except Exception as e:
-            self._l.error("ODE solver failed: %s", e, exc_info=True)
-            raise
-        #self._l.debug(f"ODE solution vertical: {sol_v}")
-
-        # Update the state variables
-        self._S_bench_v = sol_v.y[0, 1]
-        self._V_bench_v = sol_v.y[1, 1]
-        #self._a_bench_v = sol_v.y[2, -1]
-        #self._l.debug(f"ODE solution vertical: {self._S_bench_v}, {self._V_bench_v}")
-        
         state_h = [self._S_bench_h, self._V_bench_h] # Current state of the PTEmulator
-        #elf._l.info(f"Current state horizontal: {state_h}")
+        state_v = [self._S_bench_v, self._V_bench_v] # Current state of the PTEmulator
 
         try:
             sol_h = solve_ivp(
                 lambda t, y: bench_ODE(t, y, self.lh_wanted, self.HORIZONTAL_FREQ, self.HORIZONTAL_V_Max, self.HORIZONTAL_A_Max),
                 [0.0, self._execution_interval], state_h, t_eval=np.linspace(0.0, self._execution_interval, 2))
+            sol_v = solve_ivp(
+                lambda t, y: bench_ODE(t, y, self.uv_wanted, self.VERTICAL_FREQ, self.VERTICAL_V_Max, self.VERTICAL_A_Max),
+                [0.0, self._execution_interval], state_v, t_eval=np.linspace(0.0, self._execution_interval, 2))
         except Exception as e:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
             raise
-        #self._l.debug(f"ODE solution horizontal: {sol_h.y}")
 
         # Update the state variables
         self._S_bench_h = sol_h.y[0, 1]
         self._V_bench_h = sol_h.y[1, 1]
-        #self._a_bench_h = sol_h.y[2, -1]
+        self._S_bench_v = sol_v.y[0, 1]
+        self._V_bench_v = sol_v.y[1, 1]
 
-        self._l.debug(f"Setting load: {1,self._S_bench_v, self._S_bench_h}")
+        self._l.debug(f"Setting loads and displacements in PTModel. Sv: {np.round(self._S_bench_v,2)}, Sh: {np.round(self._S_bench_h,2)}")
+        self._l.debug(f"Setting loads and displacements in PTModel. Vv: {np.round(self._V_bench_v,2)}, Vh: {np.round(self._V_bench_h,2)}")
+
         try:
-            self.PT_Model.set_loads(1,self._S_bench_v, self._S_bench_h)
+            self.PT_Model.set_loads_between_nodes(1, self._S_bench_h, [9,10])
+            self.PT_Model.set_displacements_between_nodes(1, self._S_bench_v,[5,10])
         except Exception as e:
             self._l.error("Failed to set load in PTModel: %s", e, exc_info=True)
             raise
 
+    def set_horizontal_frequency(self, frequency):
+        # Set the horizontal frequency for the emulator
+        #self._l.info(f"Setting horizontal frequency to {frequency}.")
+        self.HORIZONTAL_FREQ = (2*pi / 60) / frequency
+        self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ * 1.5
+        self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ * 1.5
+        self._l.info(f"Horizontal frequency set to {self.HORIZONTAL_FREQ}, V_Max: {self.HORIZONTAL_V_Max}, A_Max: {self.HORIZONTAL_A_Max}.")
+        
+    def set_vertical_frequency(self, frequency):
+        # Set the vertical frequency for the emulator
+        #self._l.info(f"Setting vertical frequency to {frequency}.")
+        self.VERTICAL_FREQ = (2*pi / 60) / frequency
+        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ * 1.5
+        self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ * 1.5 
+        self._l.info(f"Vertical frequency set to {self.VERTICAL_FREQ}, V_Max: {self.VERTICAL_V_Max}, A_Max: {self.VERTICAL_A_Max}.")
+    
     
 if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
