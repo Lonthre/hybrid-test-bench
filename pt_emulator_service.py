@@ -353,7 +353,7 @@ if __name__ == "__main__":
         lh_initial = 0.0,
         lv_initial = 0.0,
         # r_initial = 0.0,
-        max_vertical_displacement = 5.0,
+        max_vertical_displacement = 70.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
