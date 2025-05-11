@@ -53,7 +53,7 @@ class PT_STLMonitoringService:
         self._spec = rtamt.StlDenseTimeSpecification()
         # Declare the variables that will correspond to the above signals.
         self._spec.declare_var('vertical_displacement', 'float')
-        self._spec.declare_const('max_vertical_displacement', 'float', 5.0)
+        self._spec.declare_var('max_vertical_displacement', 'float')
         self._spec.spec = 'always((vertical_displacement >= max_vertical_displacement) implies (eventually[0:60](vertical_displacement <= max_vertical_displacement)))'
         self._spec.parse()
 
@@ -78,7 +78,7 @@ class PT_STLMonitoringService:
             from(bucket: "{self._bucket}")
             |> range(start: -1h, stop: -3s)
             |> filter(fn: (r) => r["_measurement"] == "emulator")
-            |> filter(fn: (r) => r["_field"] == "vertical_displacement")
+            |> filter(fn: (r) => r["_field"] == "vertical_displacement" or r["_field"] == "max_vertical_displacement")
             |> filter(fn: (r) => r["source"] == "emulator")
             |> aggregateWindow(every: 3s, fn: last, createEmpty: true)
             |> yield(name: "last")
@@ -87,14 +87,18 @@ class PT_STLMonitoringService:
         result = self._query_api.query(org=self._org, query=flux_query)
 
         vertical_displacement = []
+        max_vertical_displacement = []
 
         for table in result:
             for record in table.records:
                 ts = record.get_time().timestamp()
-                vertical_displacement.append([ts, record.get_value()])
+                if record.get_field() == 'max_vertical_displacement':
+                    max_vertical_displacement.append([ts, record.get_value()])
+                elif record.get_field() == 'vertical_displacement':
+                    vertical_displacement.append([ts, record.get_value()])
 
         # Generate a time-series signal for max_vertical_displacement
-        max_vertical_displacement = [[ts, 5.0] for ts, _ in vertical_displacement]
+        # max_vertical_displacement = [[ts, 5.0] for ts, _ in vertical_displacement]
 
         assert len(vertical_displacement) == len(max_vertical_displacement), 'Vertical displacement and maximum vertical displacement data not aligned.'
 
@@ -107,6 +111,7 @@ class PT_STLMonitoringService:
             ['vertical_displacement', vertical_displacement],
             ['max_vertical_displacement', max_vertical_displacement]
         )
+        self._l.info(f"Robustness: {robustness}")
         return robustness
     
     def store_robustness(self, robustness):

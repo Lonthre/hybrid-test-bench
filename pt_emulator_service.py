@@ -81,7 +81,7 @@ def bench_ODE(t, y, s0, omega, v_max, a_max):
 
 class PTEmulatorService:
     
-    def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, execution_interval, rabbitmq_config):
+    def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, execution_interval, rabbitmq_config):
         # Initialize the PTEmulatorService with initial values and configuration
         self._l = logging.getLogger("PTEmulatorService")
         self._l.info("Initializing PTEmulatorService.")
@@ -98,7 +98,7 @@ class PTEmulatorService:
         self.uv = uv_initial
         self.lh = lh_initial
         self.lv = lv_initial
-        self.max_vertical_displacement = 5.0
+        self.max_vertical_displacement = max_vertical_displacement
         self.lh_wanted = 100
         self.uv_wanted = 100
         self.VERTICAL_FREQ = (2*pi/60) / 4
@@ -320,16 +320,16 @@ class PTEmulatorService:
         # Set the horizontal frequency for the emulator
         #self._l.info(f"Setting horizontal frequency to {frequency}.")
         self.HORIZONTAL_FREQ = (2*pi / 60) / frequency
-        self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ * 1.5
-        self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ * 1.5
+        self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ * 1.1
+        self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ * 1.1
         self._l.info(f"Horizontal frequency set to {self.HORIZONTAL_FREQ}, V_Max: {self.HORIZONTAL_V_Max}, A_Max: {self.HORIZONTAL_A_Max}.")
         
     def set_vertical_frequency(self, frequency):
         # Set the vertical frequency for the emulator
         #self._l.info(f"Setting vertical frequency to {frequency}.")
         self.VERTICAL_FREQ = (2*pi / 60) / frequency
-        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ * 1.5
-        self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ * 1.5 
+        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ * 1.1
+        self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ * 1.1 
         self._l.info(f"Vertical frequency set to {self.VERTICAL_FREQ}, V_Max: {self.VERTICAL_V_Max}, A_Max: {self.VERTICAL_A_Max}.")
     
     
@@ -353,6 +353,7 @@ if __name__ == "__main__":
         lh_initial = 0.0,
         lv_initial = 0.0,
         # r_initial = 0.0,
+        max_vertical_displacement = 5.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
