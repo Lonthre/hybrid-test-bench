@@ -47,6 +47,8 @@ class PT_ReconfigurationService:
 
         self._l = logging.getLogger("PT_ReconfigurationService")
 
+        self.off_message_sent = False
+
     def turn_off_forces(self):
         # Send a message to the PT to turn off the forces.
         with Rabbitmq(**config["rabbitmq"]) as rabbitmq:
@@ -59,11 +61,9 @@ class PT_ReconfigurationService:
         # Check if the robustness is below a certain threshold.
         # If it is, send a message to the PT to reconfigure the system.
         threshold = 0.0
-        for r in robustness:
-            # Check if the robustness is below the threshold.
-            if r[1] < threshold:
-                # Here we will send a message that will turn off the forces
-                self.turn_off_forces()
+        if self.off_message_sent == False and robustness[-1][-1] < threshold:
+            self.turn_off_forces()
+            self.off_message_sent = True
 
     def query_influxdb(self):
             # Define your Flux query: Query the relevant forces and displacements.
@@ -98,7 +98,7 @@ class PT_ReconfigurationService:
         # Get the displacement history from the influxdb, and process the displacement data into signals that ramt can understand.
         robustness = self.query_influxdb()
 
-        self._l.debug(f"Robustness: {robustness}")
+        # self._l.debug(f"Robustness: {robustness}")
 
         self.check_robustness(robustness)
 
