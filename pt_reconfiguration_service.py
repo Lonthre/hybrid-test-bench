@@ -61,9 +61,9 @@ class PT_ReconfigurationService:
         threshold = 0.0
         for r in robustness:
             # Check if the robustness is below the threshold.
-            r[1] < threshold:
+            if r[1] < threshold:
                 # Here we will send a message that will turn off the forces
-                self.turn_off_forces()      
+                self.turn_off_forces()
 
     def query_influxdb(self):
             # Define your Flux query: Query the relevant forces and displacements.
