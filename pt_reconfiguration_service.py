@@ -47,23 +47,37 @@ class PT_ReconfigurationService:
 
         self._l = logging.getLogger("PT_ReconfigurationService")
 
-        self.off_message_sent = False
+        self._force_off_sent = False
+        self._last_robustness = None
+        self._start_time = time.time()
+        self._grace_period = 120
 
     def turn_off_forces(self):
-        # Send a message to the PT to turn off the forces.
         with Rabbitmq(**config["rabbitmq"]) as rabbitmq:
             rabbitmq.send_message(ROUTING_KEY_FORCES, {"forces": False})
-
-        # Wait a bit for the message to be processed
-        time.sleep(5)
+        self._l.info("Forces turned off. Shutting down reconfiguration service.")
+        sys.exit(0)
 
     def check_robustness(self, robustness):
-        # Check if the robustness is below a certain threshold.
-        # If it is, send a message to the PT to reconfigure the system.
         threshold = 0.0
-        if self.off_message_sent == False and robustness[-1][-1] < threshold:
-            self.turn_off_forces()
-            self.off_message_sent = True
+
+        if time.time() - self._start_time < self._grace_period:
+            # self._l.info("Grace period active. Reconfiguration logic will start after 2 minutes.")
+            return
+        if not robustness:
+            return
+
+        ts, value = robustness[-1]  # Only check the latest value
+
+        if value < threshold:
+            if not self._force_off_sent:
+                self.turn_off_forces()
+                self._force_off_sent = True
+        else:
+            if self._last_robustness is not None and value < self._last_robustness:
+                self._force_off_sent = False
+                
+        self._last_robustness = value
 
     def query_influxdb(self):
             # Define your Flux query: Query the relevant forces and displacements.
