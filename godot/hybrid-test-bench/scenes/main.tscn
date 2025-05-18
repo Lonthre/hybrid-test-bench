@@ -1,7 +1,7 @@
 [gd_scene load_steps=13 format=3 uid="uid://blytpvcaid4yk"]
 
 [ext_resource type="Script" uid="uid://dfguh1nf0u5iq" path="res://scripts/main.gd" id="1_q753v"]
-[ext_resource type="PackedScene" uid="uid://cyrbwh2fv6hyo" path="res://scenes/hybrid_test_bench.tscn" id="3_sugp2"]
+[ext_resource type="PackedScene" uid="uid://csraghh2e5leq" path="res://scenes/hybrid_test_bench.tscn" id="3_o6xl0"]
 [ext_resource type="Script" uid="uid://h6rfkobual8p" path="res://scripts/free_look_camera.gd" id="4_jyhfs"]
 [ext_resource type="Texture2D" uid="uid://d08brdpg232mg" path="res://addons/kenney_prototype_textures/dark/texture_08.png" id="4_o6xl0"]
 [ext_resource type="Script" uid="uid://b72jlgxf70xpn" path="res://scripts/RabbitMQListener.cs" id="5_tbgi4"]
@@ -43,8 +43,7 @@ shadow_enabled = true
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.575634, 1, 0)
 script = ExtResource("4_jyhfs")
 
-[node name="HybridTestBench" parent="." instance=ExtResource("3_sugp2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.79248, 0, 0.85)
+[node name="HybridTestBench" parent="." instance=ExtResource("3_o6xl0")]
 
 [node name="Ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00350702, -0.05, -0.00457048)

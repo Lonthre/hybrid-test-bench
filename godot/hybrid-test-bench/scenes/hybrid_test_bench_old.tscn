@@ -1,0 +1,22 @@
+[gd_scene load_steps=6 format=3 uid="uid://cyrbwh2fv6hyo"]
+
+[ext_resource type="PackedScene" uid="uid://caowihci75grt" path="res://assets/hybrid_test_bench.glb" id="1_vj8dy"]
+[ext_resource type="Script" uid="uid://bll5tppe7gra6" path="res://scripts/hybrid_test_bench.gd" id="2_pko7k"]
+[ext_resource type="Material" uid="uid://ygi78sstk4q3" path="res://materials/steel.tres" id="3_kq46n"]
+[ext_resource type="Material" uid="uid://dkxm7vm4uuw8v" path="res://materials/aluminium.tres" id="4_hdreg"]
+[ext_resource type="Material" uid="uid://caaantrp5fbk0" path="res://materials/shiny_steel.tres" id="4_k7r1q"]
+
+[node name="HybridTestBench" instance=ExtResource("1_vj8dy")]
+script = ExtResource("2_pko7k")
+
+[node name="Frame" parent="." index="0"]
+material_override = ExtResource("3_kq46n")
+
+[node name="Specimen" parent="." index="1"]
+material_override = ExtResource("4_hdreg")
+
+[node name="VerticalActuator" parent="." index="2"]
+material_override = ExtResource("4_k7r1q")
+
+[node name="HorizontalActuator" parent="." index="3"]
+material_override = ExtResource("4_k7r1q")
