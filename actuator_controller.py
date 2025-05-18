@@ -80,24 +80,32 @@ class ActuatorController:
         self._l = logging.getLogger("ActuatorController")
         self._l.info("Initializing ActuatorController.")
 
-        self.lh_wanted = lh_wanted
-        self.uv_wanted = uv_wanted
-        self.vertical_frequency = vertical_frequency
-        self.horizontal_frequency = horizontal_frequency
+        try:
+            self.PT_Model = pt_model.PtModel()
+        except Exception as e:
+            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
+            raise
+
+        self._lh_wanted = lh_wanted
+        self._uv_wanted = uv_wanted
+        self._vertical_frequency = vertical_frequency
+        self._horizontal_frequency = horizontal_frequency
 
         self.VERTICAL_FREQ = (2*pi/60) / 4
         self.HORIZONTAL_FREQ = (2*pi/60) / 2
-        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ
-        self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ
+        self.VERTICAL_V_Max = self._uv_wanted * self.VERTICAL_FREQ
+        self.HORIZONTAL_V_Max = self._lh_wanted * self.HORIZONTAL_FREQ
         self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ
         self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ
         self._S_bench_v, self._V_bench_v, self._a_bench_v = 0.0, 0.0, 0.0
         self._S_bench_h, self._V_bench_h, self._a_bench_h = 0.0, 0.0, 0.0
         self._execution_interval = execution_interval # seconds
 
-    def do_something(self, ch, method, properties, body_json):
+        self._l.info(f"ActuatorController initialized")
+
+    def do_something(self):
         # Log the values received.
-        self._l.info(f"Received state sample: {body_json}")
+        # self._l.info(f"Received state sample: {body_json}")
 
         #Run the ODE solver for the horizontal and vertical motion
         try:
@@ -148,10 +156,10 @@ class ActuatorController:
 
         try:
             sol_h = solve_ivp(
-                lambda t, y: bench_ODE(t, y, self.lh_wanted, self.HORIZONTAL_FREQ, self.HORIZONTAL_V_Max, self.HORIZONTAL_A_Max),
+                lambda t, y: bench_ODE(t, y, self._lh_wanted, self.HORIZONTAL_FREQ, self.HORIZONTAL_V_Max, self.HORIZONTAL_A_Max),
                 [0.0, self._execution_interval], state_h, t_eval=np.linspace(0.0, self._execution_interval, 2))
             sol_v = solve_ivp(
-                lambda t, y: bench_ODE(t, y, self.uv_wanted, self.VERTICAL_FREQ, self.VERTICAL_V_Max, self.VERTICAL_A_Max),
+                lambda t, y: bench_ODE(t, y, self._uv_wanted, self.VERTICAL_FREQ, self.VERTICAL_V_Max, self.VERTICAL_A_Max),
                 [0.0, self._execution_interval], state_v, t_eval=np.linspace(0.0, self._execution_interval, 2))
         except Exception as e:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
@@ -177,7 +185,7 @@ class ActuatorController:
         # Set the horizontal frequency for the emulator
         #self._l.info(f"Setting horizontal frequency to {frequency}.")
         self.HORIZONTAL_FREQ = (2*pi / 60) / frequency
-        self.HORIZONTAL_V_Max = self.lh_wanted * self.HORIZONTAL_FREQ * 1.1
+        self.HORIZONTAL_V_Max = self._lh_wanted * self.HORIZONTAL_FREQ * 1.1
         self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ * 1.1
         self._l.info(f"Horizontal frequency set to {self.HORIZONTAL_FREQ}, V_Max: {self.HORIZONTAL_V_Max}, A_Max: {self.HORIZONTAL_A_Max}.")
         
@@ -185,6 +193,6 @@ class ActuatorController:
         # Set the vertical frequency for the emulator
         #self._l.info(f"Setting vertical frequency to {frequency}.")
         self.VERTICAL_FREQ = (2*pi / 60) / frequency
-        self.VERTICAL_V_Max = self.uv_wanted * self.VERTICAL_FREQ * 1.1
+        self.VERTICAL_V_Max = self._uv_wanted * self.VERTICAL_FREQ * 1.1
         self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ * 1.1 
         self._l.info(f"Vertical frequency set to {self.VERTICAL_FREQ}, V_Max: {self.VERTICAL_V_Max}, A_Max: {self.VERTICAL_A_Max}.")

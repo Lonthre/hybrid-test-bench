@@ -57,6 +57,18 @@ class PTEmulatorService:
         self.E_modulus = 100e3 # Pa (example value for aluminum)
         self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
+        try:
+            self.PT_Model = pt_model.PtModel()
+        except Exception as e:
+            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
+            raise
+
+        try:
+            self.ac = actuator_controller.ActuatorController(self.lh_wanted, self.uv_wanted, self.vertical_frequency, self.horizontal_frequency, self._execution_interval)
+        except Exception as e:
+            self._l.error("Failed to initialize ActuatorController: %s", e, exc_info=True)
+            raise
+
     def setup(self):
         self._rabbitmq.connect_to_server()
 
@@ -88,19 +100,19 @@ class PTEmulatorService:
 
             if "horizontal_force" in force_cmd and force_cmd["horizontal_force"] is not None:
                 self._l.info(f"Horizontal force command: {force_cmd['horizontal_force']}")
-                self.lh_wanted = force_cmd["horizontal_force"]
+                self._lh_wanted = force_cmd["horizontal_force"]
 
             if "vertical_displacement" in force_cmd and force_cmd["vertical_displacement"] is not None:
                 self._l.info(f"Vertical force command: {force_cmd['vertical_displacement']}")
-                self.uv_wanted = force_cmd["vertical_displacement"]
+                self._uv_wanted = force_cmd["vertical_displacement"]
                 
             if "vertical_frequency" in force_cmd and force_cmd["vertical_frequency"] is not None:
                 self._l.info(f"Vertical frequency command: {force_cmd['vertical_frequency']}")
-                self.vertical_frequency = force_cmd["vertical_frequency"]
+                self._vertical_frequency = force_cmd["vertical_frequency"]
                 
             if "horizontal_frequency" in force_cmd and force_cmd["horizontal_frequency"] is not None:
                 self._l.info(f"Horizontal frequency command: {force_cmd['horizontal_frequency']}")
-                self.horizontal_frequency = force_cmd["horizontal_frequency"]
+                self._horizontal_frequency = force_cmd["horizontal_frequency"]
 
 
     def emulate_pt(self):
@@ -110,8 +122,12 @@ class PTEmulatorService:
         # the if statement is just hardcoded emulator behaviour for now! 
         # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
-            actuator_controller = actuator_controller.ActuatorController(self._lh_wanted, self._uv_wanted, self._vertical_frequency, self._horizontal_frequency, self._execution_interval)
-            self._uh, self._uv, self._lh, self._lv = actuator_controller.do_something()
+            try:
+                self._uh, self._uv, self._lh, self._lv = self.ac.do_something()
+            except Exception as e:
+                self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
+                raise
+
         else:
             #self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
