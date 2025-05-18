@@ -147,9 +147,9 @@ class PtModel:
         beam3d_3_pars['Iyy'] = _Iyy1
         beam3d_3_pars['E'] = _Es
         beam3d_3_pars['Jv'] = beam3d_3_pars['Ixx'] + beam3d_3_pars['Iyy']
-        beam3d_3_pars['nodal_labels'] = [2, 3]
+        beam3d_3_pars['nodal_labels'] = [1, 6]
 
-        # parameters of the element 4
+        # parameters of the element 5
         beam3d_4_pars = {}
         beam3d_4_pars['shape'] = 'generic'
         beam3d_4_pars['A'] = _A1
@@ -157,9 +157,9 @@ class PtModel:
         beam3d_4_pars['Iyy'] = _Iyy1
         beam3d_4_pars['E'] = _Es
         beam3d_4_pars['Jv'] = beam3d_4_pars['Ixx'] + beam3d_4_pars['Iyy']
-        beam3d_4_pars['nodal_labels'] = [1, 6]
+        beam3d_4_pars['nodal_labels'] = [6, 12]
 
-        # parameters of the element 5
+        # parameters of the element 6
         beam3d_5_pars = {}
         beam3d_5_pars['shape'] = 'generic'
         beam3d_5_pars['A'] = _A1
@@ -167,9 +167,9 @@ class PtModel:
         beam3d_5_pars['Iyy'] = _Iyy1
         beam3d_5_pars['E'] = _Es
         beam3d_5_pars['Jv'] = beam3d_5_pars['Ixx'] + beam3d_5_pars['Iyy']
-        beam3d_5_pars['nodal_labels'] = [6, 12]
+        beam3d_5_pars['nodal_labels'] = [2, 4]
 
-        # parameters of the element
+        # parameters of the element 7
         beam3d_6_pars = {}
         beam3d_6_pars['shape'] = 'generic'
         beam3d_6_pars['A'] = _A1
@@ -177,9 +177,9 @@ class PtModel:
         beam3d_6_pars['Iyy'] = _Iyy1
         beam3d_6_pars['E'] = _Es
         beam3d_6_pars['Jv'] = beam3d_6_pars['Ixx'] + beam3d_6_pars['Iyy']
-        beam3d_6_pars['nodal_labels'] = [2, 4]
+        beam3d_6_pars['nodal_labels'] = [4, 8]
 
-        # parameters of the element 7
+        # parameters of the element 8
         beam3d_7_pars = {}
         beam3d_7_pars['shape'] = 'generic'
         beam3d_7_pars['A'] = _A1
@@ -187,9 +187,9 @@ class PtModel:
         beam3d_7_pars['Iyy'] = _Iyy1
         beam3d_7_pars['E'] = _Es
         beam3d_7_pars['Jv'] = beam3d_7_pars['Ixx'] + beam3d_7_pars['Iyy']
-        beam3d_7_pars['nodal_labels'] = [4, 8]
+        beam3d_7_pars['nodal_labels'] = [3, 11]
 
-        # parameters of the element 8
+        # parameters of the element 9
         beam3d_8_pars = {}
         beam3d_8_pars['shape'] = 'generic'
         beam3d_8_pars['A'] = _A1
@@ -197,9 +197,9 @@ class PtModel:
         beam3d_8_pars['Iyy'] = _Iyy1
         beam3d_8_pars['E'] = _Es
         beam3d_8_pars['Jv'] = beam3d_8_pars['Ixx'] + beam3d_8_pars['Iyy']
-        beam3d_8_pars['nodal_labels'] = [3, 11]
+        beam3d_8_pars['nodal_labels'] = [11, 13]
 
-        # parameters of the element 9
+        # parameters of the element 10
         beam3d_9_pars = {}
         beam3d_9_pars['shape'] = 'generic'
         beam3d_9_pars['A'] = _A1
@@ -207,9 +207,9 @@ class PtModel:
         beam3d_9_pars['Iyy'] = _Iyy1
         beam3d_9_pars['E'] = _Es
         beam3d_9_pars['Jv'] = beam3d_9_pars['Ixx'] + beam3d_9_pars['Iyy']
-        beam3d_9_pars['nodal_labels'] = [11, 13]
+        beam3d_9_pars['nodal_labels'] = [6, 7]
 
-        # parameters of the element 10
+        # parameters of the element 11
         beam3d_10_pars = {}
         beam3d_10_pars['shape'] = 'generic'
         beam3d_10_pars['A'] = _A1
@@ -217,9 +217,9 @@ class PtModel:
         beam3d_10_pars['Iyy'] = _Iyy1
         beam3d_10_pars['E'] = _Es
         beam3d_10_pars['Jv'] = beam3d_10_pars['Ixx'] + beam3d_10_pars['Iyy']
-        beam3d_10_pars['nodal_labels'] = [6, 7]
+        beam3d_10_pars['nodal_labels'] = [7, 8]
 
-        # parameters of the element 11
+        # parameters of the element 12
         beam3d_11_pars = {}
         beam3d_11_pars['shape'] = 'generic'
         beam3d_11_pars['A'] = _A1
@@ -227,19 +227,19 @@ class PtModel:
         beam3d_11_pars['Iyy'] = _Iyy1
         beam3d_11_pars['E'] = _Es
         beam3d_11_pars['Jv'] = beam3d_11_pars['Ixx'] + beam3d_11_pars['Iyy']
-        beam3d_11_pars['nodal_labels'] = [7, 8]
-
-        # parameters of the element 12
-        beam3d_12_pars = {}
-        beam3d_12_pars['shape'] = 'generic'
-        beam3d_12_pars['A'] = _A1
-        beam3d_12_pars['Ixx'] = _Ixx1
-        beam3d_12_pars['Iyy'] = _Iyy1
-        beam3d_12_pars['E'] = _Es
-        beam3d_12_pars['Jv'] = beam3d_12_pars['Ixx'] + beam3d_12_pars['Iyy']
-        beam3d_12_pars['nodal_labels'] = [12, 13]
+        beam3d_11_pars['nodal_labels'] = [12, 13]
 
         # parameters of the element 13
+        beam3d_12_pars = {}
+        beam3d_12_pars['shape'] = 'generic'
+        beam3d_12_pars['A'] = _A2
+        beam3d_12_pars['Ixx'] = _Ixx2
+        beam3d_12_pars['Iyy'] = _Iyy2
+        beam3d_12_pars['E'] = _Es
+        beam3d_12_pars['Jv'] = beam3d_12_pars['Ixx'] + beam3d_12_pars['Iyy']
+        beam3d_12_pars['nodal_labels'] = [7, 9]
+
+        # parameters of the element 14
         beam3d_13_pars = {}
         beam3d_13_pars['shape'] = 'generic'
         beam3d_13_pars['A'] = _A2
@@ -247,9 +247,9 @@ class PtModel:
         beam3d_13_pars['Iyy'] = _Iyy2
         beam3d_13_pars['E'] = _Es
         beam3d_13_pars['Jv'] = beam3d_13_pars['Ixx'] + beam3d_13_pars['Iyy']
-        beam3d_13_pars['nodal_labels'] = [7, 9]
+        beam3d_13_pars['nodal_labels'] = [9, 8]
 
-        # parameters of the element 14
+        # parameters of the element 15
         beam3d_14_pars = {}
         beam3d_14_pars['shape'] = 'generic'
         beam3d_14_pars['A'] = _A2
@@ -257,9 +257,9 @@ class PtModel:
         beam3d_14_pars['Iyy'] = _Iyy2
         beam3d_14_pars['E'] = _Es
         beam3d_14_pars['Jv'] = beam3d_14_pars['Ixx'] + beam3d_14_pars['Iyy']
-        beam3d_14_pars['nodal_labels'] = [9, 8]
+        beam3d_14_pars['nodal_labels'] = [4, 5]
 
-        # parameters of the element 15
+        # parameters of the element 16
         beam3d_15_pars = {}
         beam3d_15_pars['shape'] = 'generic'
         beam3d_15_pars['A'] = _A2
@@ -267,33 +267,24 @@ class PtModel:
         beam3d_15_pars['Iyy'] = _Iyy2
         beam3d_15_pars['E'] = _Es
         beam3d_15_pars['Jv'] = beam3d_15_pars['Ixx'] + beam3d_15_pars['Iyy']
-        beam3d_15_pars['nodal_labels'] = [4, 5]
-
-        # parameters of the element 16
-        beam3d_16_pars = {}
-        beam3d_16_pars['shape'] = 'generic'
-        beam3d_16_pars['A'] = _A2
-        beam3d_16_pars['Ixx'] = _Ixx2
-        beam3d_16_pars['Iyy'] = _Iyy2
-        beam3d_16_pars['E'] = _Es
-        beam3d_16_pars['Jv'] = beam3d_16_pars['Ixx'] + beam3d_16_pars['Iyy']
-        beam3d_16_pars['nodal_labels'] = [5, 8]
+        beam3d_15_pars['nodal_labels'] = [5, 8]
 
         # parameters of the element 17 - this is the beam - we need to plot the force and displacement on this one
-        beam3d_17_pars = {}
-        beam3d_17_pars['shape'] = 'generic'
-        beam3d_17_pars['A'] = _A3
-        beam3d_17_pars['Ixx'] = _Ixx3
-        beam3d_17_pars['Iyy'] = _Iyy3
-        beam3d_17_pars['E'] = _Ea
-        beam3d_17_pars['Jv'] = beam3d_17_pars['Ixx'] + beam3d_17_pars['Iyy']
-        beam3d_17_pars['nodal_labels'] = [10, 11]
+        beam3d_16_pars = {}
+        beam3d_16_pars['shape'] = 'generic'
+        beam3d_16_pars['A'] = _A3
+        beam3d_16_pars['Ixx'] = _Ixx3
+        beam3d_16_pars['Iyy'] = _Iyy3
+        beam3d_16_pars['E'] = _Ea
+        beam3d_16_pars['Jv'] = beam3d_16_pars['Ixx'] + beam3d_16_pars['Iyy']
+        beam3d_16_pars['nodal_labels'] = [10, 11]
 
         # add one beam3d element to the list
         self.elements.append(beam3d(self.nodes, beam3d_1_pars))
         self.elements.append(beam3d(self.nodes, beam3d_2_pars))
         self.elements.append(beam3d(self.nodes, beam3d_3_pars))
         self.elements.append(beam3d(self.nodes, beam3d_4_pars))
+        self.elements.append(beam3d(self.nodes, beam3d_5_pars))
         self.elements.append(beam3d(self.nodes, beam3d_6_pars))
         self.elements.append(beam3d(self.nodes, beam3d_7_pars))
         self.elements.append(beam3d(self.nodes, beam3d_8_pars))
@@ -305,7 +296,6 @@ class PtModel:
         self.elements.append(beam3d(self.nodes, beam3d_14_pars))
         self.elements.append(beam3d(self.nodes, beam3d_15_pars))
         self.elements.append(beam3d(self.nodes, beam3d_16_pars))
-        self.elements.append(beam3d(self.nodes, beam3d_17_pars))
 
     # Step 5: Create the Finite Element Method model
     def _setup_model(self):
@@ -346,6 +336,49 @@ class PtModel:
 
         # Create the model
         self.model = model(self.nodes, self.elements, self.model_pars)
+
+    def get_beampars(self, element):
+        self._l.debug("Getting beam parameters. Beam(%s)", element)
+        # Get the beam parameters for the model
+        # beampars - beam parameters [mm]
+        # E - Young's modulus [N/mm2]
+        # A - cross-section area [mm2]
+        # Ixx - moment of inertia about x-axis [mm4]
+        # Iyy - moment of inertia about y-axis [mm4]
+        # Jv - polar moment of inertia [mm4]
+        return self.elements[element-1]
+
+
+    def set_beampars(self, element, beampars, values):
+        self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
+        # Set the beam parameters for the model
+        # beampars - beam parameters [mm]
+        if not isinstance(beampars, list):
+            beampars = [beampars]
+            values = [values]
+
+        if len(beampars) == len(values):
+            for idx, par in enumerate(beampars):
+                #self._l.debug("Setting beam parameter. %s, Values(%s) = %s", par, idx, values[idx]) 
+                match par:
+                    # Set the beam parameters for the model
+                    case 'A':
+                        self.elements[element-1].A = (values[idx])
+                    case 'Ixx':
+                        self.elements[element-1].Ixx = (values[idx])
+                    case 'Iyy':
+                        self.elements[element-1].Iyy = (values[idx])
+                    case 'E':
+                        self.elements[element-1].E = (values[idx])
+                    case 'Jv':
+                        self.elements[element-1].Jv = (values[idx])
+                    case _:
+                        self._l.error("Beam parameters not set. %s", par)
+                        raise ValueError("Beam parameters not set. %s" % par)
+        else:
+            self._l.error("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s", np.shape(beampars), np.shape(values))
+            raise ValueError("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s" % (np.shape(beampars), np.shape(values)))
+
 
     def clear_constraints(self):
         self._l.debug("Clearing constraints.")

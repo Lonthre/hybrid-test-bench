@@ -111,7 +111,9 @@ class PTEmulatorService:
         self._S_bench_h, self._V_bench_h, self._a_bench_h = 0.0, 0.0, 0.0
         # self.r = r_initial # do we need this for the emulator?
         self._execution_interval = execution_interval # seconds
-        self._force_on = 0.0  
+        self._force_on = 0.0
+        self.E_modulus = 100e3 # Pa (example value for aluminum)
+        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
     def setup(self):
         self._rabbitmq.connect_to_server()
@@ -230,6 +232,8 @@ class PTEmulatorService:
             # Restoring force
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
+        self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
+        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -247,6 +251,7 @@ class PTEmulatorService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
+                "E_modulus": self.E_modulus,
                 # "restoring_force": self._r,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
@@ -306,8 +311,8 @@ class PTEmulatorService:
         self._S_bench_v = sol_v.y[0, 1]
         self._V_bench_v = sol_v.y[1, 1]
 
-        self._l.debug(f"Setting loads and displacements in PTModel. Sv: {np.round(self._S_bench_v,2)}, Sh: {np.round(self._S_bench_h,2)}")
-        self._l.debug(f"Setting loads and displacements in PTModel. Vv: {np.round(self._V_bench_v,2)}, Vh: {np.round(self._V_bench_h,2)}")
+        #self._l.debug(f"Setting loads and displacements in PTModel. Sv: {np.round(self._S_bench_v,2)}, Sh: {np.round(self._S_bench_h,2)}")
+        #self._l.debug(f"Setting loads and displacements in PTModel. Vv: {np.round(self._V_bench_v,2)}, Vh: {np.round(self._V_bench_h,2)}")
 
         try:
             self.PT_Model.set_loads_between_nodes(1, self._S_bench_h, [9,10])
