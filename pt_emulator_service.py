@@ -140,7 +140,7 @@ class PTEmulatorService:
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
-                self._force_on = 1.0 if force_cmd else 0.0
+                self._force_on = 1.0 if force_cmd['forces'] else 0.0
 
             if "horizontal_force" in force_cmd and force_cmd["horizontal_force"] is not None:
                 self._l.info(f"Horizontal force command: {force_cmd['horizontal_force']}")
