@@ -553,8 +553,8 @@ class PtModel:
     
     def get_displacements(self):
         # Get the displacements for the model
-        self._l.debug("Getting displacements: %s", self._u)
-        return self._u
+        self._l.debug("Getting all displacements.")
+        return self.u[:, 1]
     
     def clear_load(self, node, direction):
         #Clear the load for the model
