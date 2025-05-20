@@ -24,7 +24,6 @@ import pt_model as pt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
 
-
 class PTEmulatorService:
     
     def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, execution_interval, rabbitmq_config):
