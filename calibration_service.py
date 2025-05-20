@@ -7,6 +7,7 @@ import logging.config
 logging.config.fileConfig('logging.conf')
 
 import numpy as np
+import dt_model as dt_model
 
 class CalibrationService:
     def __init__(self, DT_Model):
@@ -18,7 +19,11 @@ class CalibrationService:
             'boundaries': None
         }
 
-        self.DT_Model = DT_Model
+        try:
+            self.DT_Model = dt_model.DtModel()
+        except Exception as e:
+            self._l.error(f"Failed to initialize DT_Model: {e}")
+            raise
 
     def get_calibration_data(self):
         return self.calibration_data
