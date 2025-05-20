@@ -32,13 +32,6 @@ class PTEmulatorService:
         self._l = logging.getLogger("PTEmulatorService")
         self._l.info("Initializing PTEmulatorService.")
 
-        try:
-            self.PT_Model = pt_model.PtModel()
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model)
-        except Exception as e:
-            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
-            raise
-
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
         
         self.uh = uh_initial
@@ -56,10 +49,10 @@ class PTEmulatorService:
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
         self.E_modulus = 100e3 # Pa (example value for aluminum)
-        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
         try:
             self.PT_Model = pt_model.PtModel()
+            self.calibration_service = cal_service.CalibrationService(self.PT_Model)
         except Exception as e:
             self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
             raise
@@ -69,6 +62,8 @@ class PTEmulatorService:
         except Exception as e:
             self._l.error("Failed to initialize ActuatorController: %s", e, exc_info=True)
             raise
+
+        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
     def setup(self):
         self._rabbitmq.connect_to_server()
@@ -124,7 +119,7 @@ class PTEmulatorService:
         # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             try:
-                self._uh, self._uv, self._lh, self._lv = self.ac.do_something()
+                self._uh, self._uv, self._lh, self._lv = self.ac.step_simulation(self.PT_Model)
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise

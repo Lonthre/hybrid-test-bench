@@ -80,12 +80,6 @@ class ActuatorController:
         self._l = logging.getLogger("ActuatorController")
         self._l.info("Initializing ActuatorController.")
 
-        try:
-            self.PT_Model = pt_model.PtModel()
-        except Exception as e:
-            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
-            raise
-
         self._lh_wanted = lh_wanted
         self._uv_wanted = uv_wanted
         self._vertical_frequency = vertical_frequency
@@ -103,20 +97,20 @@ class ActuatorController:
 
         self._l.info(f"ActuatorController initialized")
 
-    def do_something(self):
+    def step_simulation(self, PT_Model):
         # Log the values received.
         # self._l.info(f"Received state sample: {body_json}")
 
         #Run the ODE solver for the horizontal and vertical motion
         try:
-            self.run_ODE()
+            self.run_ODE(PT_Model)
         except Exception as e:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
             raise
 
         #self._l.info("Running simulation...")
         try:
-            [u, lf, r] = self.PT_Model.run_simulation()
+            [u, lf, r] = PT_Model.run_simulation()
         except Exception as e:
             self._l.error("Simulation failed: %s", e, exc_info=True)
             raise
@@ -126,22 +120,22 @@ class ActuatorController:
         
         # Horizontal displacement
         try:
-            self._uh = float(self.PT_Model.get_displacement(node10_index, fx)[0])
+            self._uh = float(PT_Model.get_displacement(node10_index, fx)[0])
         except IndexError as e:
             self._l.error(f"Error retrieving horizontal displacement from u({node10_index},1): %s", e, exc_info=True)
 
         # Vertical displacement
         try:
-            self._uv = float(self.PT_Model.get_displacement(node10_index, fz)[0])
+            self._uv = float(PT_Model.get_displacement(node10_index, fz)[0])
         except IndexError as e:
             self._l.error(f"Error retrieving vertical displacement from u({node10_index},1): %s", e, exc_info=True)
         
         #Forces
         try:
             # Vertical force
-            self._lh = float(self.PT_Model.get_load(node10_index, fx)[0])
+            self._lh = float(PT_Model.get_load(node10_index, fx)[0])
             # Horizontal force
-            self._lv = float(self.PT_Model.get_load(node10_index, fz)[0])
+            self._lv = float(PT_Model.get_load(node10_index, fz)[0])
         except Exception as e:
             self._l.error(f"Error retrieving forces from PT_Model.get_loads(): %s", e, exc_info=True)
             self._l.error(f"Forces not set: lh = {self._lh}, lv = {self._lv}")
@@ -149,7 +143,7 @@ class ActuatorController:
         return self._uh, self._uv, self._lh, self._lv
 
 
-    def run_ODE(self):
+    def run_ODE(self, PT_Model):
         #self._l.info(f"Current state vertical: {state_v}")
         state_h = [self._S_bench_h, self._V_bench_h] # Current state of the PTEmulator
         state_v = [self._S_bench_v, self._V_bench_v] # Current state of the PTEmulator
@@ -175,8 +169,8 @@ class ActuatorController:
         self._l.debug(f"Setting loads and displacements in PTModel. Vv: {np.round(self._V_bench_v,2)}, Vh: {np.round(self._V_bench_h,2)}")
 
         try:
-            self.PT_Model.set_loads_between_nodes(1, self._S_bench_h, [9,10])
-            self.PT_Model.set_displacements_between_nodes(1, self._S_bench_v,[5,10])
+            PT_Model.set_loads_between_nodes(1, self._S_bench_h, [9,10])
+            PT_Model.set_displacements_between_nodes(1, self._S_bench_v,[5,10])
         except Exception as e:
             self._l.error("Failed to set load in PTModel: %s", e, exc_info=True)
             raise
