@@ -21,6 +21,7 @@ parent_dir = current_dir
 from communication.server.rabbitmq import Rabbitmq
 from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
 import pt_model as pt_model
+import calibration_service as cal_service
 import actuator_controller as actuator_controller
 
 
@@ -53,7 +54,7 @@ class PTEmulatorService:
 
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
-        self._force_on = 1.0
+        self._force_on = 0.0
         self.E_modulus = 100e3 # Pa (example value for aluminum)
         self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
@@ -96,23 +97,23 @@ class PTEmulatorService:
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
-                self._force_on = 1.0 if force_cmd else 0.0
+                self._force_on = 1.0 if force_cmd["forces"] else 0.0
 
             if "horizontal_force" in force_cmd and force_cmd["horizontal_force"] is not None:
                 self._l.info(f"Horizontal force command: {force_cmd['horizontal_force']}")
-                self._lh_wanted = force_cmd["horizontal_force"]
+                self.lh_wanted = force_cmd["horizontal_force"]
 
             if "vertical_displacement" in force_cmd and force_cmd["vertical_displacement"] is not None:
                 self._l.info(f"Vertical force command: {force_cmd['vertical_displacement']}")
-                self._uv_wanted = force_cmd["vertical_displacement"]
+                self.uv_wanted = force_cmd["vertical_displacement"]
                 
             if "vertical_frequency" in force_cmd and force_cmd["vertical_frequency"] is not None:
                 self._l.info(f"Vertical frequency command: {force_cmd['vertical_frequency']}")
-                self._vertical_frequency = force_cmd["vertical_frequency"]
+                self.vertical_frequency = force_cmd["vertical_frequency"]
                 
             if "horizontal_frequency" in force_cmd and force_cmd["horizontal_frequency"] is not None:
                 self._l.info(f"Horizontal frequency command: {force_cmd['horizontal_frequency']}")
-                self._horizontal_frequency = force_cmd["horizontal_frequency"]
+                self.horizontal_frequency = force_cmd["horizontal_frequency"]
 
 
     def emulate_pt(self):
@@ -128,6 +129,13 @@ class PTEmulatorService:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
+            try:
+                disp = self.PT_Model.get_displacements()
+                self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+            except Exception as e:
+                self._l.error("Calibration service failed: %s", e, exc_info=True)
+                raise
         else:
             #self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
