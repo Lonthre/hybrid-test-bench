@@ -56,7 +56,7 @@ class PT_ReconfigurationService:
         with Rabbitmq(**config["rabbitmq"]) as rabbitmq:
             rabbitmq.send_message(ROUTING_KEY_FORCES, {"forces": False})
         self._l.info("Forces turned off. Shutting down reconfiguration service.")
-        sys.exit(0)
+        sys.exit(0) # Once we have reconfigured the system, we can exit the service.
 
     def check_robustness(self, robustness):
         threshold = 0.0
