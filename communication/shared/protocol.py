@@ -7,6 +7,7 @@ ROUTING_KEY_UPDATE_CTRL_PARAMS = "hybridtestbench.update.open_loop_controller.pa
 ROUTING_KEY_UPDATE_CLOSED_CTRL_PARAMS = "hybridtestbench.update.closed_loop_controller.parameters"
 ROUTING_KEY_CONTROLLER = "hybridtestbench.record.controller.state"
 ROUTING_KEY_FORCES = "hybridtestbench.forces.on"
+ROUTING_KEY_DT_FORCES = "hybridtestbench.dt.forces.on"
 ROUTING_KEY_RECORDER = "hybridtestbench.record.#"
 ROUTING_KEY_LOAD = "hybridtestbench.load"
 ROUTING_KEY_DISPLACEMENT = "hybridtestbench.displacement"

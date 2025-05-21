@@ -19,7 +19,7 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORCES
 import dt_model as dt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
@@ -68,7 +68,7 @@ class DTService:
         self._rabbitmq.connect_to_server()
 
         # Declare local queues for the force messages
-        self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_FORCES)
+        self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DT_FORCES)
 
         self._l.info(f"DTService setup complete.")
 
@@ -146,10 +146,10 @@ class DTService:
         timestamp = time.time_ns()
         # Publishes the new state
         message = {
-            "measurement": "dt_emulator",
+            "measurement": "dt",
             "time": timestamp,
             "tags": {
-                "source": "dt_emulator"
+                "source": "dt"
             },
             "fields": {
                 "horizontal_displacement": self._uh,

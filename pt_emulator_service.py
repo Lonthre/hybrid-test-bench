@@ -48,6 +48,7 @@ class PTEmulatorService:
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
         self.E_modulus = 100e3 # Pa (example value for aluminum)
+        # To-do: Should this be changed to 70e3 PA?
 
         try:
             self.PT_Model = pt_model.PtModel()
