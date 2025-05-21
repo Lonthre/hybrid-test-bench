@@ -19,17 +19,17 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
-import pt_model as pt_model
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORCES
+import dt_model as dt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
 
-class PTEmulatorService:
+class DTService:
     
     def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, execution_interval, rabbitmq_config):
-        # Initialize the PTEmulatorService with initial values and configuration
-        self._l = logging.getLogger("PTEmulatorService")
-        self._l.info("Initializing PTEmulatorService.")
+        # Initialize the DTService with initial values and configuration
+        self._l = logging.getLogger("DTService")
+        self._l.info("Initializing DTService.")
 
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
         
@@ -48,13 +48,12 @@ class PTEmulatorService:
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
         self.E_modulus = 100e3 # Pa (example value for aluminum)
-        # To-do: Should this be changed to 70e3 PA?
 
         try:
-            self.PT_Model = pt_model.PtModel()
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model)
+            self.DT_Model = dt_model.DtModel()
+            # self.calibration_service = cal_service.CalibrationService(self.DT_Model)
         except Exception as e:
-            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
+            self._l.error("Failed to initialize DTModel: %s", e, exc_info=True)
             raise
 
         try:
@@ -63,23 +62,20 @@ class PTEmulatorService:
             self._l.error("Failed to initialize ActuatorController: %s", e, exc_info=True)
             raise
 
-        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
+        self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model  
 
     def setup(self):
         self._rabbitmq.connect_to_server()
 
         # Declare local queues for the force messages
-        self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_FORCES)
-        #self.load_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_LOADS)
-        #self.displacement_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DISPLACEMENTS)
+        self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DT_FORCES)
 
-        self._l.info(f"PTEmulatorService setup complete.")
+        self._l.info(f"DTService setup complete.")
 
     def _read_forces(self):
         # Read the forces from the RabbitMQ queue
-        #self._l.debug("Reading forces from RabbitMQ.")
         msg = self._rabbitmq.get_message(self.forces_queue_name)
-        #self._l.debug(f"Message received: {msg}")
+
         if msg is not None:
             return msg
         else:
@@ -111,28 +107,25 @@ class PTEmulatorService:
                 self.horizontal_frequency = force_cmd["horizontal_frequency"]
 
 
-    def emulate_pt(self):
-        # Emulate the PT behavior based on the control commands
+    def emulate_dt(self):
+        # Emulate the DT behavior based on the control commands
 
-        # Additional logic for the emulator can go here
-        # the if statement is just hardcoded emulator behaviour for now! 
-        # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
+        # Additional logic for the DT can go here
         if self._force_on == 1.0:
             try:
-                self._uh, self._uv, self._lh, self._lv = self.ac.step_simulation(self.PT_Model)
+                self._uh, self._uv, self._lh, self._lv = self.ac.step_simulation(self.DT_Model)
             except Exception as e:
-                self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
+                self._l.error("Failed to emulate DT behavior: %s", e, exc_info=True)
                 raise
 
             try:
-                disp = self.PT_Model.get_displacements()
-                self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
-                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+                disp = self.DT_Model.get_displacements()
+                # self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                # self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
             except Exception as e:
                 self._l.error("Calibration service failed: %s", e, exc_info=True)
                 raise
         else:
-            #self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
             self._uh = 0.0
             # Vertical displacement
@@ -144,8 +137,8 @@ class PTEmulatorService:
             # Restoring force
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
-        self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
-        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
+        self.E_modulus = self.DT_Model.get_beampars(16).E # Get the E modulus from the DT model
+        self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the DT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -153,10 +146,10 @@ class PTEmulatorService:
         timestamp = time.time_ns()
         # Publishes the new state
         message = {
-            "measurement": "emulator",
+            "measurement": "dt",
             "time": timestamp,
             "tags": {
-                "source": "emulator"
+                "source": "dt"
             },
             "fields": {
                 "horizontal_displacement": self._uh,
@@ -164,7 +157,6 @@ class PTEmulatorService:
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
                 "E_modulus": self.E_modulus,
-                # "restoring_force": self._r,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
                 "execution_interval": self._execution_interval,
@@ -185,9 +177,9 @@ class PTEmulatorService:
                 time_start = time.time()
                 #Check if there are control commands
                 self.check_control_commands()
-                # Emulate the PT behavior
-                self.emulate_pt() 
-                # Send the new state to the hybrid test bench physical twin
+                # Emulate the DT behavior
+                self.emulate_dt() 
+                # Send the new state to the hybrid test bench digital twin
                 self.send_state(time_start)
                 # Sleep until the next sample
                 time_end = time.time()
@@ -215,17 +207,16 @@ if __name__ == "__main__":
     # The startup.conf comes from the hybrid test bench repository.
     config = ConfigFactory.parse_file(startup_conf)
     
-    service = PTEmulatorService(
+    service = DTService(
         uh_initial = 0.0,
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        # r_initial = 0.0,
         max_vertical_displacement = 70.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
     service.setup()
     
-    # Start the PTEmulatorService
+    # Start the DTService
     service.start_emulation()
