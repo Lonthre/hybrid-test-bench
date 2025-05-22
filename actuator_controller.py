@@ -9,6 +9,9 @@ from math import *
 
 from scipy.integrate import solve_ivp
 
+# Configure logging from the logging.conf file
+logging.config.fileConfig('logging.conf')
+
 # Get the current working directory. Should be hybrid-test-bench
 current_dir = os.getcwd()
 
@@ -18,9 +21,6 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 import pt_model as pt_model
-
-# Define the global variables for the model
-fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6 # force and moment indices
 
 # Define the system of ODEs for the bench
 def bench_ODE(t, y, s0, omega, v_max, a_max):
@@ -76,109 +76,74 @@ def bench_ODE(t, y, s0, omega, v_max, a_max):
     return [v, a]
 
 class ActuatorController:
-    def __init__(self, lh_wanted, uv_wanted, vertical_frequency, horizontal_frequency, execution_interval):
-        self._l = logging.getLogger("ActuatorController")
+    def __init__(self, AMP, Period, execution_interval):
+        # Initialize the actuator controller with the given parameters.
+        #AMP: Amplitude of the actuator [kN/mm]
+        #Period: Period of the actuator [minutes]
+        #execution_interval: Execution interval for the ODE solver [seconds]
+
+        # Set up logging
+        self._l = logging.getLogger("Actuator")
         self._l.info("Initializing ActuatorController.")
 
-        self._lh_wanted = lh_wanted
-        self._uv_wanted = uv_wanted
-        self._vertical_frequency = vertical_frequency
-        self._horizontal_frequency = horizontal_frequency
+        self._S, self._V, self._a_bench = 0.0, 0.0, 0.0
 
-        self.VERTICAL_FREQ = (2*pi/60) / 4
-        self.HORIZONTAL_FREQ = (2*pi/60) / 2
-        self.VERTICAL_V_Max = self._uv_wanted * self.VERTICAL_FREQ
-        self.HORIZONTAL_V_Max = self._lh_wanted * self.HORIZONTAL_FREQ
-        self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ
-        self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ
-        self._S_bench_v, self._V_bench_v, self._a_bench_v = 0.0, 0.0, 0.0
-        self._S_bench_h, self._V_bench_h, self._a_bench_h = 0.0, 0.0, 0.0
+        self.AMP = AMP
+        self.set_period(Period)
+
         self._execution_interval = execution_interval # seconds
 
         self._l.info(f"ActuatorController initialized")
 
-    def step_simulation(self, PT_Model):
-        # Log the values received.
-        # self._l.info(f"Received state sample: {body_json}")
-
+    def step_simulation(self):
         #Run the ODE solver for the horizontal and vertical motion
         try:
-            self.run_ODE(PT_Model)
+            self.run_ODE()
         except Exception as e:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
             raise
 
-        node10_index = 10
-        
-        # Horizontal displacement
-        try:
-            self._uh = float(PT_Model.get_displacement(node10_index, fx)[0])
-        except IndexError as e:
-            self._l.error(f"Error retrieving horizontal displacement from u({node10_index},1): %s", e, exc_info=True)
+        return self._S
 
-        # Vertical displacement
-        try:
-            self._uv = float(PT_Model.get_displacement(node10_index, fz)[0])
-        except IndexError as e:
-            self._l.error(f"Error retrieving vertical displacement from u({node10_index},1): %s", e, exc_info=True)
-        
-        #Forces
-        try:
-            # Vertical force
-            self._lh = float(PT_Model.get_load(node10_index, fx)[0])
-            # Horizontal force
-            self._lv = float(PT_Model.get_load(node10_index, fz)[0])
-        except Exception as e:
-            self._l.error(f"Error retrieving forces from PT_Model.get_loads(): %s", e, exc_info=True)
-            self._l.error(f"Forces not set: lh = {self._lh}, lv = {self._lv}")
-        
-        return self._uh, self._uv, self._lh, self._lv
-
-
-    def run_ODE(self, PT_Model):
+    def run_ODE(self):
         #self._l.info(f"Current state vertical: {state_v}")
-        state_h = [self._S_bench_h, self._V_bench_h] # Current state of the PTEmulator
-        state_v = [self._S_bench_v, self._V_bench_v] # Current state of the PTEmulator
+        state = [self._S, self._V] # Current state of the PTEmulator
 
         try:
-            sol_h = solve_ivp(
-                lambda t, y: bench_ODE(t, y, self._lh_wanted, self.HORIZONTAL_FREQ, self.HORIZONTAL_V_Max, self.HORIZONTAL_A_Max),
-                [0.0, self._execution_interval], state_h, t_eval=np.linspace(0.0, self._execution_interval, 2))
-            sol_v = solve_ivp(
-                lambda t, y: bench_ODE(t, y, self._uv_wanted, self.VERTICAL_FREQ, self.VERTICAL_V_Max, self.VERTICAL_A_Max),
-                [0.0, self._execution_interval], state_v, t_eval=np.linspace(0.0, self._execution_interval, 2))
+            sol = solve_ivp(
+                lambda t, y: bench_ODE(t, y, self.AMP, self.FREQ, self.V_Max, self.A_Max),
+                [0.0, self._execution_interval], state, t_eval=np.linspace(0.0, self._execution_interval, 2))
         except Exception as e:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
             raise
 
         # Update the state variables
-        self._S_bench_h = sol_h.y[0, 1]
-        self._V_bench_h = sol_h.y[1, 1]
-        self._S_bench_v = sol_v.y[0, 1]
-        self._V_bench_v = sol_v.y[1, 1]
+        self._S = sol.y[0, 1]
+        self._V = sol.y[1, 1]
 
-        self._l.debug(f"Setting loads and displacements in PTModel. Sv: {np.round(self._S_bench_v,2)}, Sh: {np.round(self._S_bench_h,2)}")
-        self._l.debug(f"Setting loads and displacements in PTModel. Vv: {np.round(self._V_bench_v,2)}, Vh: {np.round(self._V_bench_h,2)}")
+        self._l.debug(f"Setting loads and displacements in PTModel. Sv: {np.round(self._S,2)}, Vh: {np.round(self._V,2)}")
 
-        try:
-            PT_Model.set_loads_between_nodes(1, self._S_bench_h, [9,10])
-            PT_Model.set_displacements_between_nodes(1, self._S_bench_v,[5,10])
-        except Exception as e:
-            self._l.error("Failed to set load in PTModel: %s", e, exc_info=True)
-            raise
+    def set_amplitude(self, amp):
+        # Set the amplitude for the actuator [kN/mm]
+        #self._l.info(f"Setting amplitude to {amplitude}.")
+        self.AMP = amp
+        self.V_Max = self.AMP * self.FREQ * 1.1
+        self.A_Max = self.V_Max * self.FREQ * 1.1 
+        self._l.info(f"Amplitude set to {self.AMP}, V_Max: {self.V_Max}, A_Max: {self.A_Max}.")
+  
+    def set_frequency(self, freq):
+        # Set the frequency for the actuator [RPM]
+        #self._l.info(f"Setting frequency to {frequency}.")
+        self.FREQ = freq/60
+        self.V_Max = self.AMP * self.FREQ * 1.1
+        self.A_Max = self.V_Max * self.FREQ * 1.1 
+        self._l.info(f"Frequency set to {self.FREQ}, V_Max: {self.V_Max}, A_Max: {self.A_Max}.")
 
-    def set_horizontal_frequency(self, frequency):
-        # Set the horizontal frequency for the emulator
-        #self._l.info(f"Setting horizontal frequency to {frequency}.")
-        self.HORIZONTAL_FREQ = (2*pi / 60) / frequency
-        self.HORIZONTAL_V_Max = self._lh_wanted * self.HORIZONTAL_FREQ * 1.1
-        self.HORIZONTAL_A_Max = self.HORIZONTAL_V_Max * self.HORIZONTAL_FREQ * 1.1
-        self._l.info(f"Horizontal frequency set to {self.HORIZONTAL_FREQ}, V_Max: {self.HORIZONTAL_V_Max}, A_Max: {self.HORIZONTAL_A_Max}.")
-        
-    def set_vertical_frequency(self, frequency):
-        # Set the vertical frequency for the emulator
-        #self._l.info(f"Setting vertical frequency to {frequency}.")
-        self.VERTICAL_FREQ = (2*pi / 60) / frequency
-        self.VERTICAL_V_Max = self._uv_wanted * self.VERTICAL_FREQ * 1.1
-        self.VERTICAL_A_Max = self.VERTICAL_V_Max * self.VERTICAL_FREQ * 1.1 
-        self._l.info(f"Vertical frequency set to {self.VERTICAL_FREQ}, V_Max: {self.VERTICAL_V_Max}, A_Max: {self.VERTICAL_A_Max}.")
+    def set_period(self, period):
+        # Set the period for the actuator [minutes]
+        #self._l.info(f"Setting frequency to {frequency}.")
+        self.T = period
+        self.FREQ = (2*pi / 60) / self.T
+        self.V_Max = self.AMP * self.FREQ * 1.1
+        self.A_Max = self.V_Max * self.FREQ * 1.1 
+        self._l.info(f"Period set to {self.T}, V_Max: {self.V_Max}, A_Max: {self.A_Max}.")
