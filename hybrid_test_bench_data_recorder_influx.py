@@ -70,6 +70,35 @@ class HybridTestBenchDataRecorderInflux:
         except KeyboardInterrupt:
             self.rabbitmq.close()
     
+    def get_data(self, node):
+        # Placeholder for data retrieval logic
+        wanted_node = node
+        
+        # Horizontal displacement
+        try:
+            self._uh = float(PT_Model.get_displacement(wanted_node, fx)[0])
+        except IndexError as e:
+            self._l.error(f"Error retrieving horizontal displacement from u({wanted_node},1): %s", e, exc_info=True)
+
+        # Vertical displacement
+        try:
+            self._uv = float(PT_Model.get_displacement(wanted_node, fz)[0])
+        except IndexError as e:
+            self._l.error(f"Error retrieving vertical displacement from u({wanted_node},1): %s", e, exc_info=True)
+        
+        #Forces
+        try:
+            # Vertical force
+            self._lh = float(PT_Model.get_load(wanted_node, fx)[0])
+            # Horizontal force
+            self._lv = float(PT_Model.get_load(wanted_node, fz)[0])
+        except Exception as e:
+            self._l.error(f"Error retrieving forces from PT_Model.get_loads(): %s", e, exc_info=True)
+            self._l.error(f"Forces not set: lh = {self._lh}, lv = {self._lv}")
+
+        return self._uh, self._uv, self._lh, self._lv
+
+    
 if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
     from pyhocon import ConfigFactory

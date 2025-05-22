@@ -23,7 +23,10 @@ from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORC
 import dt_model as dt_model
 import pt_model as pt_model
 import calibration_service as cal_service
-import actuator_controller as actuator_controller
+import actuator_controller as ac_ctrl
+
+# Define the global variables for the model
+fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6 # force and moment indices
 
 class DTService:
     
@@ -39,8 +42,8 @@ class DTService:
         self.lh = lh_initial
         self.lv = lv_initial
 
-        self.vertical_frequency = 0.0
-        self.horizontal_frequency = 0.0
+        self.vertical_frequency = 1.0
+        self.horizontal_frequency = 1.0
 
         self.lh_wanted = 100
         self.uv_wanted = 100
@@ -56,6 +59,7 @@ class DTService:
             self._l.error("Failed to initialize DTModel: %s", e, exc_info=True)
             raise
 
+        # Initialize the actuator controller instance
         try:
             self.PT_Model = pt_model.PtModel()
             self.PT_Model_displacements = self.PT_Model.get_displacements()
@@ -64,9 +68,17 @@ class DTService:
             raise
 
         try:
-            self.ac = actuator_controller.ActuatorController(self.lh_wanted, self.uv_wanted, self.vertical_frequency, self.horizontal_frequency, self._execution_interval)
+            self.H_ac = ac_ctrl.ActuatorController(self.lh_wanted, self.horizontal_period, self._execution_interval)
+            self.V_ac = ac_ctrl.ActuatorController(self.uv_wanted, self.vertical_period, self._execution_interval)
         except Exception as e:
             self._l.error("Failed to initialize ActuatorController: %s", e, exc_info=True)
+            raise
+
+        # Initialize the CalibrationService instance (Only in DT)
+        try:
+            self.calibration_service = cal_service.CalibrationService(self.PT_Model) #DT Model
+        except Exception as e:
+            self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
             raise
 
         self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model  
@@ -123,18 +135,22 @@ class DTService:
             if "horizontal_force" in force_cmd and force_cmd["horizontal_force"] is not None:
                 self._l.info(f"Horizontal force command: {force_cmd['horizontal_force']}")
                 self.lh_wanted = force_cmd["horizontal_force"]
+                self.H_ac.set_amplitude(self.lh_wanted)
 
             if "vertical_displacement" in force_cmd and force_cmd["vertical_displacement"] is not None:
                 self._l.info(f"Vertical force command: {force_cmd['vertical_displacement']}")
                 self.uv_wanted = force_cmd["vertical_displacement"]
+                self.V_ac.set_amplitude(self.uv_wanted)
                 
-            if "vertical_frequency" in force_cmd and force_cmd["vertical_frequency"] is not None:
-                self._l.info(f"Vertical frequency command: {force_cmd['vertical_frequency']}")
-                self.vertical_frequency = force_cmd["vertical_frequency"]
+            if "horizontal_period" in force_cmd and force_cmd["horizontal_period"] is not None:
+                self._l.info(f"Horizontal period command: {force_cmd['horizontal_period']}")
+                self.horizontal_period = force_cmd["horizontal_period"]
+                self.H_ac.set_period(self.horizontal_period)
                 
-            if "horizontal_frequency" in force_cmd and force_cmd["horizontal_frequency"] is not None:
-                self._l.info(f"Horizontal frequency command: {force_cmd['horizontal_frequency']}")
-                self.horizontal_frequency = force_cmd["horizontal_frequency"]
+            if "vertical_period" in force_cmd and force_cmd["vertical_period"] is not None:
+                self._l.info(f"Vertical period command: {force_cmd['vertical_period']}")
+                self.vertical_period = force_cmd["vertical_period"]
+                self.V_ac.set_period(self.vertical_period)
 
 
     def emulate_dt(self):
@@ -143,24 +159,28 @@ class DTService:
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
             try:
-                self._uh, self._uv, self._lh, self._lv = self.ac.step_simulation(self.DT_Model)
+                Load = self.H_ac.step_simulation()
+                Displacement = self.V_ac.step_simulation()
+                self.PT_Model.set_loads_between_nodes(1, Load, [9,10])
+                self.PT_Model.set_displacements_between_nodes(1, Displacement,[5,10])
             except Exception as e:
-                self._l.error("Failed to emulate DT behavior: %s", e, exc_info=True)
+                self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
             # self._l.info("Running simulation...")
             try:
-                [u, lf, r] = self.DT_Model.run_simulation()
+                self.PT_Model.run_simulation()
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
                 raise
-            # self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
-
+            
+            self._uh, self._uv, self._lh, self._lv = self.get_data(10) #Get the data from the PT model (10 is the node number)
+        
+            #Calibration service - DT only
             try:
-                disp = np.array(self.PT_Model_displacements)
-                self.calibrationService.set_calibration_displacement(disp) # Set the displacements in the calibration service
-                self.calibrationService.calibrate_model() # Call the calibration service to calibrate the model
-                self.DT_Model = self.calibrationService.get_DT_Model() # Get the calibrated model
+                disp = self.DT_Model.get_displacements()
+                # self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                # self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
             except Exception as e:
                 self._l.error("Calibration service failed: %s", e, exc_info=True)
                 raise
@@ -233,6 +253,19 @@ class DTService:
             self._l.info("Emulation loop interrupted by user.")
         except Exception as e:
             self._l.error("Emulation loop failed: %s", e, exc_info=True)
+
+    def get_data(self, node):
+        # Get the data from the PT model
+        try:
+            uh = float(self.PT_Model.get_displacement(node, fx)[0])
+            uv = float(self.PT_Model.get_displacement(node, fz)[0])
+            lh = float(self.PT_Model.get_load(node, fx)[0])
+            lv = float(self.PT_Model.get_load(node, fz)[0])
+            return uh, uv, lh, lv
+        except Exception as e:
+            self._l.error("Failed to get data from PT model: %s", e, exc_info=True)
+            raise
+        return self._uh, self._uv, self._lh, self._lv
     
 if __name__ == "__main__":
     # Get utility functions to config logging and load configuration
