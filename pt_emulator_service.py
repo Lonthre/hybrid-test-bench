@@ -76,13 +76,6 @@ class PTEmulatorService:
             self._l.error("Failed to initialize RFCA: %s", e, exc_info=True)
             raise
 
-        # Initialize the CalibrationService instance (Only in DT)
-        try:
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model) #DT Model
-        except Exception as e:
-            self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
-            raise
-
         self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the PT model  
 
     def setup(self):
@@ -138,8 +131,6 @@ class PTEmulatorService:
         # Emulate the PT behavior based on the control commands
 
         # Additional logic for the emulator can go here
-        # the if statement is just hardcoded emulator behaviour for now! 
-        # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             try:
                 Load = self.H_ac.step_simulation()
@@ -163,16 +154,6 @@ class PTEmulatorService:
                 [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
                 self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
 
-            # Calibration service - DT only
-            try:
-                disp_of_PT = self.PT_Model.get_displacements()
-
-                # calibration_service needs to be based on DT, from the PT model data
-                self.calibration_service.set_calibration_displacement(disp_of_PT) # Set the displacements in the calibration service
-                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-            except Exception as e:
-                self._l.error("Calibration service failed: %s", e, exc_info=True)
-                raise
         else:
             # self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
@@ -186,8 +167,8 @@ class PTEmulatorService:
             # Restoring force
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
-        #self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
-        #self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
+        self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
+        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -214,7 +195,10 @@ class PTEmulatorService:
             }
         }
 
+        displacements_message = {"pt_displacements": self.PT_Model.get_displacements().tolist()}
+
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
+        self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, displacements_message)
         #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
         #self._l.debug(message)
     
