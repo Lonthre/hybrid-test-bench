@@ -19,7 +19,7 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES, ROUTING_KEY_DISPLACEMENT
 import pt_model as pt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
@@ -53,7 +53,7 @@ class PTEmulatorService:
 
         try:
             self.PT_Model = pt_model.PtModel()
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model)
+            # self.calibration_service = cal_service.CalibrationService(self.PT_Model)
             self.RFCA = rfca.RFCA([])
         except Exception as e:
             self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
@@ -115,28 +115,27 @@ class PTEmulatorService:
 
     def emulate_pt(self):
         # Emulate the PT behavior based on the control commands
-
+        
         # Additional logic for the emulator can go here
-        # the if statement is just hardcoded emulator behaviour for now! 
-        # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             try:
                 self._uh, self._uv, self._lh, self._lv = self.ac.step_simulation(self.PT_Model)
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
+
+            # self._l.info("Running simulation...")
+            try:
+                [u, lf, r] = self.PT_Model.run_simulation()
+            except Exception as e:
+                self._l.error("Simulation failed: %s", e, exc_info=True)
+                raise
+            # self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
             
             if self.RFCA.update_if_peak(self._lv):
                 [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
-                self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage)}")
+                self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
 
-            try:
-                disp = self.PT_Model.get_displacements()
-                self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
-                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-            except Exception as e:
-                self._l.error("Calibration service failed: %s", e, exc_info=True)
-                raise
         else:
             #self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
@@ -178,7 +177,10 @@ class PTEmulatorService:
             }
         }
 
+        displacements_message = {"pt_displacements": self.PT_Model.get_displacements().tolist()}
+
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
+        self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, displacements_message)
         #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
         #self._l.debug(message)
     

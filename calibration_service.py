@@ -10,7 +10,7 @@ import numpy as np
 import dt_model as dt_model
 
 class CalibrationService:
-    def __init__(self, pt_model):
+    def __init__(self, model):
         self._l = logging.getLogger('CalibrationService')
         self._l.debug("Initialising CalibrationService...")
 
@@ -19,13 +19,7 @@ class CalibrationService:
             'boundaries': None
         }
 
-        self.PT_Model = pt_model
-
-        try:
-            self.DT_Model = dt_model.DtModel()
-        except Exception as e:
-            self._l.error(f"Failed to initialize DT_Model: {e}")
-            raise
+        self.DT_Model = model
 
     def get_calibration_data(self):
         return self.calibration_data
@@ -60,7 +54,7 @@ class CalibrationService:
     
     def calibrate_model(self):
         self._l.debug("Starting calibration...")
-        E = self.PT_Model.get_beampars(16).E  # Get the current value of E from the PT model
+        E = self.DT_Model.get_beampars(16).E  # Get the current value of E from the DT model
 
         initial_guess = [E]
 
@@ -72,7 +66,7 @@ class CalibrationService:
         self.accuracy = res.cost
         self.res = res.x[0]  # Extract the optimized value of E
 
-        self.PT_Model.set_beampars(16, 'E', self.res)  # Set the optimized value of E in the PT model
+        self.DT_Model.set_beampars(16, 'E', self.res)  # Set the optimized value of E in the DT model
         self._l.debug(f"Calibration completed. Optimized E: {self.res}")
 
 
@@ -81,8 +75,7 @@ class CalibrationService:
         noise = 30  # Add noise to the guess
         E = P_guess + noise
         
-        self.PT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the PT model
-        self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model  
+        self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
 
         try:
             self.DT_Model.run_simulation()

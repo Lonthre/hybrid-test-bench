@@ -108,14 +108,6 @@ class ActuatorController:
             self._l.error("ODE solver failed: %s", e, exc_info=True)
             raise
 
-        #self._l.info("Running simulation...")
-        try:
-            [u, lf, r] = PT_Model.run_simulation()
-        except Exception as e:
-            self._l.error("Simulation failed: %s", e, exc_info=True)
-            raise
-        #self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
-
         node10_index = 10
         
         # Horizontal displacement

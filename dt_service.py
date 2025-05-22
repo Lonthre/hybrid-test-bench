@@ -19,8 +19,9 @@ assert os.path.basename(current_dir) == 'hybrid-test-bench', 'Current directory 
 parent_dir = current_dir
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORCES
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORCES, ROUTING_KEY_DISPLACEMENT
 import dt_model as dt_model
+import pt_model as pt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
 
@@ -51,9 +52,15 @@ class DTService:
 
         try:
             self.DT_Model = dt_model.DtModel()
-            # self.calibration_service = cal_service.CalibrationService(self.DT_Model)
         except Exception as e:
             self._l.error("Failed to initialize DTModel: %s", e, exc_info=True)
+            raise
+
+        try:
+            self.PT_Model = pt_model.PtModel()
+            self.PT_Model_displacements = self.PT_Model.get_displacements()
+        except Exception as e:
+            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
             raise
 
         try:
@@ -64,11 +71,15 @@ class DTService:
 
         self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model  
 
+        # Calibration service
+        self.calibrationService = cal_service.CalibrationService(self.DT_Model)
+
     def setup(self):
         self._rabbitmq.connect_to_server()
 
         # Declare local queues for the force messages
         self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DT_FORCES)
+        self.displacements_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DISPLACEMENT)
 
         self._l.info(f"DTService setup complete.")
 
@@ -80,11 +91,30 @@ class DTService:
             return msg
         else:
             return None
+
+    def _read_displacements(self):
+        # Read the PT model from the RabbitMQ queue
+        msg = self._rabbitmq.get_message(self.displacements_queue_name)
+
+        if msg is not None:
+            return msg
+        else:
+            return None
+    
+    def _check_pt_model(self):
+        # Check if there are control commands
+        pt_displacements = self._read_displacements()
+        #self._l.debug(f"Control command: {pt_model}")
+        if pt_displacements is not None:
+            if 'pt_displacements' in pt_displacements and pt_displacements['pt_displacements'] is not None:
+                self._l.info("PT displacements: %s", pt_displacements["pt_displacements"])
+                self.PT_Model_displacements = pt_displacements["pt_displacements"]
+                self._l.info(f"PT displacements: {self.PT_Model_displacements}")
     
     def check_control_commands(self):
         # Check if there are control commands
         force_cmd = self._read_forces()
-        #self._l.debug(f"Control command: {force_cmd}")
+        # self._l.debug(f"Control command: {force_cmd}")
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
@@ -118,10 +148,19 @@ class DTService:
                 self._l.error("Failed to emulate DT behavior: %s", e, exc_info=True)
                 raise
 
+            # self._l.info("Running simulation...")
             try:
-                disp = self.DT_Model.get_displacements()
-                # self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
-                # self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+                [u, lf, r] = self.DT_Model.run_simulation()
+            except Exception as e:
+                self._l.error("Simulation failed: %s", e, exc_info=True)
+                raise
+            # self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
+
+            try:
+                disp = np.array(self.PT_Model_displacements)
+                self.calibrationService.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                self.calibrationService.calibrate_model() # Call the calibration service to calibrate the model
+                self.DT_Model = self.calibrationService.get_DT_Model() # Get the calibrated model
             except Exception as e:
                 self._l.error("Calibration service failed: %s", e, exc_info=True)
                 raise
@@ -138,7 +177,7 @@ class DTService:
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
         self.E_modulus = self.DT_Model.get_beampars(16).E # Get the E modulus from the DT model
-        self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the DT model
+        # self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the DT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -177,6 +216,8 @@ class DTService:
                 time_start = time.time()
                 #Check if there are control commands
                 self.check_control_commands()
+                # Check if there are PT model displacements
+                self._check_pt_model()
                 # Emulate the DT behavior
                 self.emulate_dt() 
                 # Send the new state to the hybrid test bench digital twin
