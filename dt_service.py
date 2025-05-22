@@ -52,14 +52,16 @@ class DTService:
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
         self.E_modulus = 100e3 # Pa (example value for aluminum)
+        # self.Damage = 0.0
 
+        # Initialize the DT model instance
         try:
             self.DT_Model = dt_model.DtModel()
         except Exception as e:
             self._l.error("Failed to initialize DTModel: %s", e, exc_info=True)
             raise
 
-        # Initialize the actuator controller instance
+        # Initialize the PT model instance
         try:
             self.PT_Model = pt_model.PtModel()
             self.PT_Model_displacements = self.PT_Model.get_displacements()
@@ -67,6 +69,7 @@ class DTService:
             self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
             raise
 
+        # Initialize the actuator controller instance
         try:
             self.H_ac = ac_ctrl.ActuatorController(self.lh_wanted, self.horizontal_period, self._execution_interval)
             self.V_ac = ac_ctrl.ActuatorController(self.uv_wanted, self.vertical_period, self._execution_interval)
@@ -76,7 +79,7 @@ class DTService:
 
         # Initialize the CalibrationService instance (Only in DT)
         try:
-            self.calibration_service = cal_service.CalibrationService(self.DT_Model) #DT Model
+            self.calibration_service = cal_service.CalibrationService(self.DT_Model) # DT Model
         except Exception as e:
             self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
             raise
@@ -148,7 +151,6 @@ class DTService:
                 self.vertical_period = force_cmd["vertical_period"]
                 self.V_ac.set_period(self.vertical_period)
 
-
     def emulate_dt(self):
         # Emulate the DT behavior based on the control commands
 
@@ -163,14 +165,13 @@ class DTService:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
-            # self._l.info("Running simulation...")
             try:
                 self.PT_Model.run_simulation()
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
                 raise
             
-            self._uh, self._uv, self._lh, self._lv = self.get_data(10) #Get the data from the PT model (10 is the node number)
+            self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
         
             # Calibration service - DT only
             try:

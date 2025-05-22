@@ -21,6 +21,7 @@ parent_dir = current_dir
 from communication.server.rabbitmq import Rabbitmq
 from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES, ROUTING_KEY_DISPLACEMENT
 import pt_model as pt_model
+# import dt_model as dt_model
 import calibration_service as cal_service
 import actuator_controller as ac_ctrl
 import RainFlowCycleAlgorithm as rfca
@@ -46,7 +47,7 @@ class PTEmulatorService:
         self.horizontal_period = 1.0
 
         self.lh_wanted = 100
-        self.uv_wanted = 20
+        self.uv_wanted = 20 # To-do: This is 100 in dt_service - is this correct?
 
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
@@ -83,14 +84,12 @@ class PTEmulatorService:
 
         # Declare local queues for the force messages
         self.forces_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_FORCES)
-        #self.load_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_LOADS)
-        #self.displacement_queue_name = self._rabbitmq.declare_local_queue(routing_key=ROUTING_KEY_DISPLACEMENTS)
 
         self._l.info(f"PTEmulatorService setup complete.")
 
     def _read_forces(self):
         # Read the forces from the RabbitMQ queue
-        #self._l.debug("Reading forces from RabbitMQ.")
+        
         msg = self._rabbitmq.get_message(self.forces_queue_name)
         #self._l.debug(f"Message received: {msg}")
         if msg is not None:
@@ -101,7 +100,7 @@ class PTEmulatorService:
     def check_control_commands(self):
         # Check if there are control commands
         force_cmd = self._read_forces()
-        #self._l.debug(f"Control command: {force_cmd}")
+        # self._l.debug(f"Control command: {force_cmd}")
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
@@ -125,12 +124,13 @@ class PTEmulatorService:
             if "vertical_period" in force_cmd and force_cmd["vertical_period"] is not None:
                 self._l.info(f"Vertical period command: {force_cmd['vertical_period']}")
                 self.vertical_period = force_cmd["vertical_period"]
-                self.V_ac.set_period(self.vertical_period)    
+                self.V_ac.set_period(self.vertical_period)
 
     def emulate_pt(self):
         # Emulate the PT behavior based on the control commands
 
         # Additional logic for the emulator can go here
+        # Additional logic for the PT emulator can go here
         if self._force_on == 1.0:
             try:
                 Load = self.H_ac.step_simulation()
@@ -155,7 +155,6 @@ class PTEmulatorService:
                 self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
 
         else:
-            # self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
             self._uh = 0.0
             # Vertical displacement
@@ -187,7 +186,6 @@ class PTEmulatorService:
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
                 "E_modulus": self.E_modulus,
-                # "restoring_force": self._r,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
                 "execution_interval": self._execution_interval,
@@ -227,7 +225,6 @@ class PTEmulatorService:
         except Exception as e:
             self._l.error("Emulation loop failed: %s", e, exc_info=True)
 
-
     def get_data(self, node):
         # Get the data from the PT model
         try:
@@ -260,7 +257,6 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        # r_initial = 0.0,
         max_vertical_displacement = 70.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
