@@ -88,6 +88,7 @@ class ActuatorController:
 
         self._S, self._V, self._a_bench = 0.0, 0.0, 0.0
 
+
         self.AMP = AMP
         self.set_period(Period)
 
