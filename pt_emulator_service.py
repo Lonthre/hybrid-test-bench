@@ -78,7 +78,7 @@ class PTEmulatorService:
 
         # Initialize the CalibrationService instance (Only in DT)
         try:
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model)
+            self.calibration_service = cal_service.CalibrationService(self.PT_Model) #DT Model
         except Exception as e:
             self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
             raise
@@ -132,14 +132,14 @@ class PTEmulatorService:
             if "vertical_period" in force_cmd and force_cmd["vertical_period"] is not None:
                 self._l.info(f"Vertical period command: {force_cmd['vertical_period']}")
                 self.vertical_period = force_cmd["vertical_period"]
-                self.V_ac.set_period(self.vertical_period)
-                
-
+                self.V_ac.set_period(self.vertical_period)    
 
     def emulate_pt(self):
         # Emulate the PT behavior based on the control commands
-        
+
         # Additional logic for the emulator can go here
+        # the if statement is just hardcoded emulator behaviour for now! 
+        # _uh, _uv, _lh, _lv, and _r need to be extracted from the simulation results (u, lf, r)
         if self._force_on == 1.0:
             try:
                 Load = self.H_ac.step_simulation()
@@ -155,28 +155,26 @@ class PTEmulatorService:
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
                 raise
-
             
-            self._uh, self._uv, self._lh, self._lv = self.get_data(10) #Get the data from the PT model (10 is the node number)
+            self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
             
+            # Fatigue - PT only
             if self.RFCA.update_if_peak(self._lv):
                 [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
                 self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
 
-            # self._l.info("Running simulation...")
+            # Calibration service - DT only
             try:
-                [u, lf, r] = self.PT_Model.run_simulation()
-            except Exception as e:
-                self._l.error("Simulation failed: %s", e, exc_info=True)
-                raise
-            # self._l.info(f"Simulation completed. u = {u.shape}, lf = {lf.shape}, r = {r.shape}")
-            
-            if self.RFCA.update_if_peak(self._lv):
-                [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
-                self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
+                disp_of_PT = self.PT_Model.get_displacements()
 
+                # calibration_service needs to be based on DT, from the PT model data
+                self.calibration_service.set_calibration_displacement(disp_of_PT) # Set the displacements in the calibration service
+                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+            except Exception as e:
+                self._l.error("Calibration service failed: %s", e, exc_info=True)
+                raise
         else:
-            #self._l.info("Force is off, setting displacements and forces to zero.")
+            # self._l.info("Force is off, setting displacements and forces to zero.")
             # Horizontal displacement
             self._uh = 0.0
             # Vertical displacement
@@ -216,10 +214,7 @@ class PTEmulatorService:
             }
         }
 
-        displacements_message = {"pt_displacements": self.PT_Model.get_displacements().tolist()}
-
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
-        self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, displacements_message)
         #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
         #self._l.debug(message)
     

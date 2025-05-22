@@ -42,8 +42,8 @@ class DTService:
         self.lh = lh_initial
         self.lv = lv_initial
 
-        self.vertical_frequency = 1.0
-        self.horizontal_frequency = 1.0
+        self.vertical_period = 1.0
+        self.horizontal_period = 1.0
 
         self.lh_wanted = 100
         self.uv_wanted = 100
@@ -76,15 +76,12 @@ class DTService:
 
         # Initialize the CalibrationService instance (Only in DT)
         try:
-            self.calibration_service = cal_service.CalibrationService(self.PT_Model) #DT Model
+            self.calibration_service = cal_service.CalibrationService(self.DT_Model) #DT Model
         except Exception as e:
             self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
             raise
 
         self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model  
-
-        # Calibration service
-        self.calibrationService = cal_service.CalibrationService(self.DT_Model)
 
     def setup(self):
         self._rabbitmq.connect_to_server()
@@ -121,7 +118,6 @@ class DTService:
             if 'pt_displacements' in pt_displacements and pt_displacements['pt_displacements'] is not None:
                 self._l.info("PT displacements: %s", pt_displacements["pt_displacements"])
                 self.PT_Model_displacements = pt_displacements["pt_displacements"]
-                self._l.info(f"PT displacements: {self.PT_Model_displacements}")
     
     def check_control_commands(self):
         # Check if there are control commands
@@ -159,10 +155,10 @@ class DTService:
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
             try:
-                Load = self.H_ac.step_simulation()
-                Displacement = self.V_ac.step_simulation()
-                self.PT_Model.set_loads_between_nodes(1, Load, [9,10])
-                self.PT_Model.set_displacements_between_nodes(1, Displacement,[5,10])
+                load = self.H_ac.step_simulation()
+                displacement = self.V_ac.step_simulation()
+                self.PT_Model.set_loads_between_nodes(1, load, [9,10])
+                self.PT_Model.set_displacements_between_nodes(1, displacement,[5,10])
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
@@ -176,11 +172,12 @@ class DTService:
             
             self._uh, self._uv, self._lh, self._lv = self.get_data(10) #Get the data from the PT model (10 is the node number)
         
-            #Calibration service - DT only
+            # Calibration service - DT only
             try:
-                disp = self.DT_Model.get_displacements()
-                # self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
-                # self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+                disp = np.array(self.PT_Model_displacements) # Get the displacements from the PT model
+                self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+                self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
             except Exception as e:
                 self._l.error("Calibration service failed: %s", e, exc_info=True)
                 raise
