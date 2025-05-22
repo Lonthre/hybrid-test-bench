@@ -299,7 +299,7 @@ class PtModel:
 
     # Step 5: Create the Finite Element Method model
     def _setup_model(self):
-        self._l.debug("Setting up model.")
+        #self._l.debug("Setting up model.")
         assert self.nodes is not None, "Nodes are not initialized."
         assert self.elements, "Elements are not initialized."
 
@@ -338,7 +338,7 @@ class PtModel:
         self.model = model(self.nodes, self.elements, self.model_pars)
 
     def get_beampars(self, element):
-        self._l.debug("Getting beam parameters. Beam(%s)", element)
+        #self._l.debug("Getting beam parameters. Beam(%s)", element)
         # Get the beam parameters for the model
         # beampars - beam parameters [mm]
         # E - Young's modulus [N/mm2]
@@ -350,7 +350,7 @@ class PtModel:
 
 
     def set_beampars(self, element, beampars, values):
-        self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
+        #self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
         # Set the beam parameters for the model
         # beampars - beam parameters [mm]
         if not isinstance(beampars, list):
@@ -409,6 +409,41 @@ class PtModel:
         # u - displacement [mm]
         return self._c[nodes, direction]
     
+    def calculate_fatigue(self, cycles):
+        self._l.debug("Calculating fatigue...")
+        D = 0.0
+        # Calculate the fatigue for the model
+        # cycles - [stress, cycles]
+        for cycle in cycles:
+            #self._l.debug("Cycle: %s", cycle)
+            # Calculate the fatigue for the model
+            # stress - [N/mm2]
+            # cycles - [cycles]
+            # fatigue - [N/mm2]
+            gamma_Mf = 1.0
+            N_Ed = cycle[1]
+            N_L = 10e8 #number of stress cycles associated with the variable amplitude fatigue limit - EUC3-1-9 Figure 8.1a
+            N_C = 2*10e6 #number of stress cycles associated with the characteristic reference value of fatigue resistance - EUC3-1-9 Figure 8.1a
+            N_D = N_C #number of cycles associated with the characteristic constant amplitude fatigue limit - EUC3-1-9 Figure 8.1a
+            delta_sigma_D = 125 #constant amplitude fatigue limit [N/mm2] - EUC3-1-9 Table A.1
+            delta_sigma_C = delta_sigma_D #reference value at 2*10e6 cycles [N/mm2] - EUC3-1-9 Table A.1
+            delta_sigma_L = 0.647 * delta_sigma_C #variable amplitude fatigue limit [N/mm2] - EUC3-1-9 Figure 8.1a
+            delta_sigma_Ed = cycle[0] * _lb3 * _h3/2/_Iyy3 *10e3 #M = F * a, sigma = M/W, W = I/y, [N/mm2] 
+            m1 = 5 #first slope parameter of the fatigue resistance curve - EUC3-1-9 Figure 8.1a
+            m2 = 9 #slope parameter of the extende fatigue resistance curve - EUC3-1-9 Figure 8.1a
+            if delta_sigma_Ed >= delta_sigma_D/gamma_Mf:
+                N_Rd = 2*10e6*(delta_sigma_C*gamma_Mf/delta_sigma_Ed)**m1
+            elif delta_sigma_L/gamma_Mf <= delta_sigma_D <= delta_sigma_D/gamma_Mf:
+                N_Rd = N_D*(delta_sigma_D*gamma_Mf/delta_sigma_Ed)**m1
+            else:
+                N_Rd = 0
+            D = D + N_Ed/N_Rd #Damage - EUROCODE 3-1-9 (A.6)
+        E = self.get_beampars(16).E * (1-D)
+        E = 70e3 * (1-D) # Young's modulus [N/mm2]
+        self.set_beampars(16, 'E', E)
+        self._l.debug("Fatigue damage: %s, E-Module %s", D, E)
+        return [D,E]
+    
     def clear_displacement(self, node, direction):
         #Clear the load for the model
         self._l.debug("Clearing displacement. node: %s, direction: %s", node, direction)
@@ -436,19 +471,19 @@ class PtModel:
         #self._setup_model()
 
     def set_displacements(self, t, u, nodes, direction):
-        self._l.debug("Setting displacements. t: %s, u: %s", t, u)
+        #self._l.debug("Setting displacements. t: %s, u: %s", t, u)
         i = np.shape(nodes)[0]
 
         # Set the displacements for the model
         
         if np.shape(u) == np.shape(nodes) == np.shape(direction):
-            self._l.debug("Setting displacements. t: %s, l: %s, node: %s, direction: %s", t, u, nodes, direction)
+            #self._l.debug("Setting displacements. t: %s, l: %s, node: %s, direction: %s", t, u, nodes, direction)
             for _i in range(i):
                 node = [nodes[_i], direction[_i]]
                 if np.array_equal(self._un, [[0, 0]]):
                     self._un[0] = node
                 U_idx = np.where((node[0] == np.array(self._un)[:, 0]) & (node[1] == np.array(self._un)[:, 1]))[0] 
-                self._l.debug("Finding idx. %s, %s", U_idx, len([U_idx]))
+                #self._l.debug("Finding idx. %s, %s", U_idx, len([U_idx]))
 
                 if len(U_idx) == 0:
                     self._u.append(u[_i])
@@ -464,7 +499,7 @@ class PtModel:
         #self._setup_model()
 
     def set_displacements_between_nodes(self, t, U, nodes):
-        self._l.debug("Setting displacements between nodes. t: %s, u: %s, nodes: %s", t, U, nodes)
+        #self._l.debug("Setting displacements between nodes. t: %s, u: %s, nodes: %s", t, U, nodes)
         # Set the displacements for the model
         # t - time [s]
         # u - displacement [mm]
@@ -491,7 +526,7 @@ class PtModel:
                     if isnan(F):
                         self._l.info("Force is NaN. %s", F)
                         F = 1 # default force [N]
-                    self._l.debug("Force. %s", F)
+                    #self._l.debug("Force. %s", F)
                 try:
                     self.set_loads_between_nodes(1, F, nodes[_i])
                 except Exception as e:
@@ -506,7 +541,7 @@ class PtModel:
         #self._setup_model()
 
     def get_displacement(self, nodes, direction):
-        self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
+        #self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
         # Get the displacements for the model
         
         if isinstance(nodes, int):
@@ -531,7 +566,7 @@ class PtModel:
         return us
     
     def get_displacement_between_nodes(self, node1, node2):
-        self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
+        #self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
         # Get the displacements for the model
         
         ulok = [0,0,0]
@@ -547,7 +582,7 @@ class PtModel:
             L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0])**2 + (xyz1[1] - xyz2[1] + ulok[1])**2 + (xyz1[2] - xyz2[2] + ulok[2])**2) # length [mm]
             delta_l = L1 - L0 # deltaL [mm]
         
-        self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
+        #self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
         return L0, L1, delta_l
 
     
@@ -583,7 +618,7 @@ class PtModel:
         #self._setup_model()
 
     def set_loads(self, t, f, nodes, direction):
-        self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
+        #self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
         i = np.shape(nodes)[0]
 
         F_idx = []
@@ -592,9 +627,7 @@ class PtModel:
         
         if np.shape(f) == np.shape(nodes) == np.shape(direction):
             for _i in range(i):
-                if f[_i] == 0:
-                    self._l.debug("Skipping load. %s, %s, %s", f[_i], nodes[_i], direction[_i])
-                else:
+                if not f[_i] == 0:
                     #self._l.debug("Setting loads. %s, %s, %s", f[_i], nodes[_i], direction[_i])
                     node = [nodes[_i], direction[_i]]
                     if self._fn == [[]]:
@@ -622,6 +655,8 @@ class PtModel:
                         #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
                         #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
                         #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fs), self._fs)
+                #else:
+                    #self._l.debug("Skipping load. %s, %s, %s", f[_i], nodes[_i], direction[_i])
 
                 
         else:
@@ -631,7 +666,7 @@ class PtModel:
         #self._setup_model()
 
     def set_loads_between_nodes(self, t, F, nodes):
-        self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
+        #self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
         # Set the loads for the model
         # t - time [s]
         # F - force [N]
@@ -649,7 +684,7 @@ class PtModel:
 
         else:
             # If F is an int, convert it to a numpy array
-            self._l.debug("F is not a list. %s", F)
+            #self._l.debug("F is not a list. %s", F)
             F = [F]
             nodes = [nodes]
 
@@ -703,7 +738,7 @@ class PtModel:
             self._l.error("Loads and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(F), np.shape(nodes))
             raise ValueError("Loads and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(F), np.shape(nodes)))
 
-        self._l.debug("Loads between nodes: %s", self.BTW)
+        #self._l.debug("Loads between nodes: %s", self.BTW)
         #self._setup_model()
 
     def get_load(self, nodes, direction):
@@ -739,18 +774,18 @@ class PtModel:
 
     # Step 6: create and execute the simulation
     def run_simulation(self):
-        self._l.debug("Running simulation.")
+        #self._l.debug("Running simulation.")
 
         self._setup_model()
         
         simulation_pars = {}
 
         sim = simulation(self.model, simulation_pars)
-        self._l.debug("Simulation parameters: %s, %s", self.model, simulation_pars)
+        #self._l.debug("Simulation parameters: %s, %s", self.model, simulation_pars)
         try:
             # [u, v, a, r] = simulation.dynamic_analysis()
             # perform static analysis (u: displacements, l: applied forces, r: restoring force)
-            self._l.debug("Performing static analysis.")
+            #self._l.debug("Performing static analysis.")
 
             self.u, self.l, self.r = sim.static_analysis()
             #self._l.debug("Static analysis completed. %s, %s, %s", self.u, self.l, self.r)
@@ -758,5 +793,5 @@ class PtModel:
         except Exception as e:
             self._l.error("Simulation failed: %s", e)
             raise
-        self._l.debug("Simulation completed.")
+        #self._l.debug("Simulation completed.")
         return self.u, self.l, self.r

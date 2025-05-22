@@ -6,6 +6,7 @@ import logging.config
 logging.config.fileConfig('logging.conf')
 
 import matplotlib.pyplot as plt
+import numpy as np
 plt.set_loglevel(level='warning')
 
 
@@ -22,6 +23,7 @@ class RFCA:
     
     def get_cycles(self):
         self._l.info("Getting cycles.")
+        self.cycles = []
         for flow in self.flows[:-1]:
             cycle_range = round(abs(flow[3] - flow[2]))
             tmp_list = [cycle[0] for cycle in self.cycles]
@@ -30,10 +32,13 @@ class RFCA:
             else:
                 cycle_idx = tmp_list.index(cycle_range)
                 self.cycles[cycle_idx][1] += 0.5
-                self._l.info(f"Cycle range: {cycle_range}, Cycle index: {cycle_idx}")
+                #self._l.info(f"Cycle range: {cycle_range}, Cycle index: {cycle_idx}")
 
             self.cycles = sorted(self.cycles)
-            self._l.info(f"Cycles: {self.cycles}")
+            #self._l.info(f"Cycles: {self.cycles}")
+        self._l.info(f"Data: {self.data}")
+        self._l.info(f"Data: {self.flows}")
+        self._l.info(f"Data: {self.cycles}")
         return self.cycles
 
     def get_flows(self):
@@ -43,15 +48,24 @@ class RFCA:
         return self.active_flows
     
     def update_if_peak(self, new_data):
+        is_peak = True
         if self.Atmp[0] <= self.Atmp[1] and self.Atmp[0] < new_data:
-            self.data.append(self.Atmp[0])
+            self.data.append(round(self.Atmp[0]))
+            self.counter_step(self.data[-1])
         elif self.Atmp[0] >= self.Atmp[1] and self.Atmp[0] > new_data:
-            self.data.append(self.Atmp[0])
+            self.data.append(round(self.Atmp[0]))
+            self.counter_step(self.data[-1])
+        else:
+            is_peak = False
         self.Atmp = [new_data, self.Atmp[0]]
+        if is_peak:
+            self._l.info(f"New peak found: {self.data[-1]}")
+        return is_peak
 
     def counter_step(self, new_data):
         self.step = self.step + 1
         self._l.info(f"Running Counter Step: {self.step}")
+        self._l.info(f"Peaks: {self.data}")
         current_max = new_data
         tmp_active_flows = self.active_flows.copy()
         terminated_flows = []
@@ -175,6 +189,24 @@ class RFCA:
         plt.legend()
         plt.grid()
         plt.show()
+
+    def plot_cycles(self):
+        self._l.info("Drawing cycles.")
+       
+        fig2, ax = plt.subplots()   
+
+        # Example data
+        ranges = [cycle[0] for cycle in self.cycles]
+        y_pos = ranges
+        cycles = [cycle[1] for cycle in self.cycles]
+
+        ax.barh(y_pos, cycles, align='center')
+        ax.set_yticks(y_pos, labels=ranges)
+        ax.set_xlabel('Number of Cycles')
+        ax.set_title('Rainflow Cycles')
+
+        plt.show()
+
 
 
 

@@ -23,6 +23,7 @@ from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
 import pt_model as pt_model
 import calibration_service as cal_service
 import actuator_controller as actuator_controller
+import RainFlowCycleAlgorithm as rfca
 
 class PTEmulatorService:
     
@@ -42,17 +43,18 @@ class PTEmulatorService:
         self.horizontal_frequency = 0.0
 
         self.lh_wanted = 100
-        self.uv_wanted = 100
+        self.uv_wanted = 20
 
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
-        self.E_modulus = 100e3 # Pa (example value for aluminum)
-        # To-do: Should this be changed to 70e3 PA?
+        self.E_modulus = 70e3 # Pa (example value for aluminum)
+        self.Damage = 0.0
 
         try:
             self.PT_Model = pt_model.PtModel()
             self.calibration_service = cal_service.CalibrationService(self.PT_Model)
+            self.RFCA = rfca.RFCA([])
         except Exception as e:
             self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
             raise
@@ -123,6 +125,10 @@ class PTEmulatorService:
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
+            
+            if self.RFCA.update_if_peak(self._lv):
+                [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
+                self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage)}")
 
             try:
                 disp = self.PT_Model.get_displacements()
@@ -144,8 +150,8 @@ class PTEmulatorService:
             # Restoring force
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
-        self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
-        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
+        #self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
+        #self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
