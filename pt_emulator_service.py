@@ -123,6 +123,10 @@ class PTEmulatorService:
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
+            
+            if self.RFCA.update_if_peak(self._lv):
+                [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
+                self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage)}")
 
             # self._l.info("Running simulation...")
             try:
