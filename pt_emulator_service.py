@@ -47,7 +47,7 @@ class PTEmulatorService:
         self.horizontal_period = 1.0
 
         self.lh_wanted = 100
-        self.uv_wanted = 20 # To-do: This is 100 in dt_service - is this correct?
+        self.uv_wanted = 20
 
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
@@ -193,7 +193,7 @@ class PTEmulatorService:
             }
         }
 
-        displacements_message = {"pt_displacements": self.PT_Model.get_displacements().tolist()}
+        displacements_message = {"pt_displacements": self.PT_Model.get_displacement([10, 10, 10], [1, 2, 3])}
 
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
         self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, displacements_message)

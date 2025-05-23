@@ -80,9 +80,12 @@ class CalibrationService:
             print(f"Cost for {P_guess}: Simulation failed")
             return 1e6  # Return a high cost to avoid this solution
         
-        displacements = self.DT_Model.get_displacements()
+        displacements = self.DT_Model.get_displacement([10, 10, 10], [1, 2, 3])
         recieved_displacements = self.calibration_data['displacements']
         differences = recieved_displacements - displacements
+        print(f"Displacements: {displacements}")
+        print(f"Received displacements: {recieved_displacements}")
+        print(f"Differences: {differences}")
         sum_sq_dff = sum(differences**2)
         print(f"Cost for {P_guess}: {sum_sq_dff}")
         return sum_sq_dff
