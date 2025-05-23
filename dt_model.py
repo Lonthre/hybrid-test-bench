@@ -762,4 +762,5 @@ class DtModel:
             self._l.error("Simulation failed: %s", e)
             raise
         self._l.debug("Simulation completed.")
+        self._l.debug("Load: %s", self.l)
         return self.u, self.l, self.r
