@@ -42,15 +42,12 @@ class CalibrationService:
         return {
            'cost': self.accuracy,
            'results': self.res
-        }
-           
+        }       
     
     def set_boundaries(self, new_boundaries):
         self._l.debug("Setting calibration boundaries...")
         self.calibration_data['boundaries'] = new_boundaries
         return "Boundaries updated successfully."
-    
-
     
     def calibrate_model(self):
         self._l.debug("Starting calibration...")

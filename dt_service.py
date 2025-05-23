@@ -46,7 +46,7 @@ class DTService:
         self.horizontal_period = 1.0
 
         self.lh_wanted = 100
-        self.uv_wanted = 100
+        self.uv_wanted = 20
 
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
@@ -54,19 +54,13 @@ class DTService:
         self.E_modulus = 100e3 # Pa (example value for aluminum)
         # self.Damage = 0.0
 
+        self.PT_Model_displacements = []
+
         # Initialize the DT model instance
         try:
             self.DT_Model = dt_model.DtModel()
         except Exception as e:
             self._l.error("Failed to initialize DTModel: %s", e, exc_info=True)
-            raise
-
-        # Initialize the PT model instance
-        try:
-            self.PT_Model = pt_model.PtModel()
-            self.PT_Model_displacements = self.PT_Model.get_displacements()
-        except Exception as e:
-            self._l.error("Failed to initialize PTModel: %s", e, exc_info=True)
             raise
 
         # Initialize the actuator controller instance
@@ -84,7 +78,7 @@ class DTService:
             self._l.error("Failed to initialize CalibrationService: %s", e, exc_info=True)
             raise
 
-        self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model  
+        self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the beam parameters for the DT model 
 
     def setup(self):
         self._rabbitmq.connect_to_server()
