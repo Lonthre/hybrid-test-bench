@@ -148,3 +148,9 @@ class ActuatorController:
         self.V_Max = self.AMP * self.FREQ * 1.1
         self.A_Max = self.V_Max * self.FREQ * 1.1 
         self._l.info(f"Period set to {self.T}, V_Max: {self.V_Max}, A_Max: {self.A_Max}.")
+
+    def calibrate(self, calibration_data):
+        # Calibrate the actuator with the given data
+        #self._l.info(f"Calibrating actuator with data: {calibration_data}.")
+        self._S = calibration_data
+        self._l.info(f"Calibration data set to {self.calibration_data}.")

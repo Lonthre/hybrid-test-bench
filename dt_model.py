@@ -521,6 +521,7 @@ class DtModel:
                 node = nodes[_i]
                 d = direction[_i]
                 dof = self.model.find_dofs([[node, d]]).squeeze()
+                
                 #self._l.debug("Finding dof. %s, %s", dof, self.u[dof,1])
                 us.append(self.u[dof, 1]) # local displacement [mm]
         else:
@@ -646,6 +647,8 @@ class DtModel:
         if isinstance(F, list):
             # If F is a list, convert it to a numpy array
             self._l.debug("F is a list. %s", F)
+            if len(F) == 1:
+                F = F[0]
 
         else:
             # If F is an int, convert it to a numpy array
