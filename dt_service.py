@@ -54,7 +54,10 @@ class DTService:
         self.E_modulus = 100e3 # Pa (example value for aluminum)
         # self.Damage = 0.0
 
-        self.PT_Model_displacements = []
+        self.PT_Model_h_d = 0.0
+        self.PT_Model_v_d = 0.0
+        self.PT_Model_h_f = 0.0
+        self.PT_Model_v_f = 0.0
 
         # Initialize the DT model instance
         try:
@@ -109,12 +112,21 @@ class DTService:
     
     def _check_pt_model(self):
         # Check if there are control commands
-        pt_displacements = self._read_displacements()
+        state = self._read_displacements()
         #self._l.debug(f"Control command: {pt_model}")
-        if pt_displacements is not None:
-            if 'pt_displacements' in pt_displacements and pt_displacements['pt_displacements'] is not None:
-                self._l.info("PT displacements: %s", pt_displacements["pt_displacements"])
-                self.PT_Model_displacements = pt_displacements["pt_displacements"]
+        if state is not None:
+            if 'horizontal_displacement' in state and state['horizontal_displacement'] is not None:
+                # self._l.info("Horizontal displacement: %s", state["horizontal_displacement"])
+                self.PT_Model_h_d = state["horizontal_displacement"][2]
+            if 'vertical_displacement' in state and state['vertical_displacement'] is not None:
+                # self._l.info("Vertical displacement: %s", state["vertical_displacement"])
+                self.PT_Model_v_d = state["vertical_displacement"][2]
+            if 'horizontal_force' in state and state['horizontal_force'] is not None:
+                # self._l.info("Horizontal force: %s", state["horizontal_force"])
+                self.PT_Model_h_f = state["horizontal_force"][0]
+            if 'vertical_force' in state and state['vertical_force'] is not None:
+                # self._l.info("Vertical force: %s", state["vertical_force"])
+                self.PT_Model_v_f = state["vertical_force"][0]
     
     def check_control_commands(self):
         # Check if there are control commands
@@ -151,10 +163,12 @@ class DTService:
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
             try:
-                load = self.H_ac.step_simulation()
-                displacement = self.V_ac.step_simulation()
-                self.DT_Model.set_loads_between_nodes(1, load, [9,10])
-                self.DT_Model.set_displacements_between_nodes(1, displacement,[5,10])
+                # load = self.H_ac.step_simulation()
+                # displacement = self.V_ac.step_simulation()
+                # self.DT_Model.set_loads_between_nodes(1, load, [9,10])
+                # self.DT_Model.set_displacements_between_nodes(1, displacement,[5,10])
+                self.DT_Model.set_displacements_between_nodes(1, self.PT_Model_v_d, [5,10])
+                self.DT_Model.set_loads_between_nodes(1, self.PT_Model_h_f, [9,10])
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
@@ -169,8 +183,8 @@ class DTService:
         
             # Calibration service - DT only
             try:
-                disp = np.array(self.PT_Model_displacements) # Get the displacements from the PT model
-                self.calibration_service.set_calibration_displacement(disp) # Set the displacements in the calibration service
+                state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
+                self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
                 self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
                 self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
             except Exception as e:

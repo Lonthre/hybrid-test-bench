@@ -193,10 +193,16 @@ class PTEmulatorService:
             }
         }
 
-        displacements_message = {"pt_displacements": self.PT_Model.get_displacement([10, 10, 10], [1, 2, 3])}
+        state_message = {
+            # "pt_displacements": self.PT_Model.get_displacement([10, 10, 10], [1, 2, 3])
+            "horizontal_displacement": self.PT_Model.get_displacement_between_nodes(9, 10),
+            "vertical_displacement": self.PT_Model.get_displacement_between_nodes(5, 10),
+            "horizontal_force": self.PT_Model.get_load(10, fx),
+            "vertical_force": self.PT_Model.get_load(10, fz)
+            }
 
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
-        self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, displacements_message)
+        self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, state_message)
         #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
         #self._l.debug(message)
     
