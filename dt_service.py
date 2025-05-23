@@ -153,14 +153,14 @@ class DTService:
             try:
                 load = self.H_ac.step_simulation()
                 displacement = self.V_ac.step_simulation()
-                self.PT_Model.set_loads_between_nodes(1, load, [9,10])
-                self.PT_Model.set_displacements_between_nodes(1, displacement,[5,10])
+                self.DT_Model.set_loads_between_nodes(1, load, [9,10])
+                self.DT_Model.set_displacements_between_nodes(1, displacement,[5,10])
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
             try:
-                self.PT_Model.run_simulation()
+                self.DT_Model.run_simulation()
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
                 raise
@@ -249,10 +249,10 @@ class DTService:
     def get_data(self, node):
         # Get the data from the PT model
         try:
-            uh = float(self.PT_Model.get_displacement(node, fx)[0])
-            uv = float(self.PT_Model.get_displacement(node, fz)[0])
-            lh = float(self.PT_Model.get_load(node, fx)[0])
-            lv = float(self.PT_Model.get_load(node, fz)[0])
+            uh = float(self.DT_Model.get_displacement(node, fx)[0])
+            uv = float(self.DT_Model.get_displacement(node, fz)[0])
+            lh = float(self.DT_Model.get_load(node, fx)[0])
+            lv = float(self.DT_Model.get_load(node, fz)[0])
             return uh, uv, lh, lv
         except Exception as e:
             self._l.error("Failed to get data from PT model: %s", e, exc_info=True)
