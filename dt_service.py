@@ -195,7 +195,7 @@ class DTService:
                     state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
                     self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
                     self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-                    #self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
+                    self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
                 except Exception as e:
                     self._l.error("Calibration service failed: %s", e, exc_info=True)
                     raise

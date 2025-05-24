@@ -479,7 +479,7 @@ class DtModel:
 
     def set_displacements_between_nodes(self, U, nodes):
         self._l.debug("Setting displacements between nodes. u: %s, nodes: %s", U, nodes)
-        self.run_simulation()
+        # self.run_simulation()
         # Set the displacements for the model
         # t - time [s]
         # u - displacement [mm]
