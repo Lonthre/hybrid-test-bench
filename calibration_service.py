@@ -107,7 +107,7 @@ class CalibrationService:
                 diff = U - U0
 
             self.DT_Model.run_simulation()
-            self._l.info("Simulation completed successfully.")
+            #self._l.info("Simulation completed successfully.")
         except:
             self._l.debug(f"Cost for {P_guess}: Simulation failed")
             return 1e6  # Return a high cost to avoid this solution

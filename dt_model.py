@@ -828,7 +828,7 @@ class DtModel:
                     fs = [0]
                     
         else:
-            self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
+            self._l.error("Load and node swhape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
             raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         self._l.debug("Loads: %s", fs)
         if len(fs) == 1: 

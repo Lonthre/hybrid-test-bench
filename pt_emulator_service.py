@@ -231,7 +231,7 @@ class PTEmulatorService:
                 self.send_state(time_start)
                 if send_state_interval == 3:
                     self.update_state(time_start)
-                    send_state_interval = 1
+                    send_state_interval = 0
                 send_state_interval += 1                 # Sleep until the next sample
                 time_end = time.time()
                 time_diff = time_end - time_start
@@ -276,7 +276,7 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        max_vertical_displacement = 15.0,
+        max_vertical_displacement = 70.0,
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
