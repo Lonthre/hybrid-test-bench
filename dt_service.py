@@ -168,40 +168,30 @@ class DTService:
         if self._force_on == 1.0:
             self._l.info(f"State received: {self.state_received}.")
             try:
-                load = self.H_ac.step_simulation()
-                displacement = self.V_ac.step_simulation()
-                if not self.state_received:
-                    self.DT_Model.set_loads_between_nodes(load, [9,10])
-                    self.DT_Model.set_displacements_between_nodes(displacement,[5,10])
-                else:
+                if self.state_received:
+                    old_load = self.H_ac.step_simulation()
+                    old_displacement = self.V_ac.step_simulation()
                     rload = self.PT_Model_h_f
                     rdisplacement = self.PT_Model_v_d
-                    self.DT_Model.set_loads_between_nodes(rload, [9,10])
-                    self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
                     self.H_ac.calibrate(rload)
                     self.V_ac.calibrate(rdisplacement)
-
-                    if abs((load - rload)/load) > 0.1:
-                        self._l.warning(f"Load difference: {abs((load - rload)/load)*100}%")
                     
-                    if abs((displacement - rdisplacement)/displacement) > 0.1:
-                        self._l.warning(f"Displacement difference: {abs((displacement - rdisplacement)/displacement)*100}%")
+                    if abs((old_load - rload)/old_load) > 0.1:
+                        self._l.warning(f"Load difference: {abs((old_load - rload)/old_load)*100}%")
+                    
+                    if abs((old_displacement - rdisplacement)/old_displacement) > 0.1:
+                        self._l.warning(f"Displacement difference: {abs((old_displacement - rdisplacement)/old_displacement)*100}%")
 
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
-            try:
-                self.DT_Model.run_simulation()
-            except Exception as e:
-                self._l.error("Simulation failed: %s", e, exc_info=True)
-                raise
-            
-            self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
-        
             # Calibration service - DT only
             if self.state_received:
                 try:
+                    self.DT_Model.set_loads_between_nodes(rload, [9,10])
+                    self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
+                    
                     state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
                     self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
                     self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
@@ -209,6 +199,21 @@ class DTService:
                 except Exception as e:
                     self._l.error("Calibration service failed: %s", e, exc_info=True)
                     raise
+
+            try:
+                load = self.H_ac.step_simulation()
+                displacement = self.V_ac.step_simulation()
+
+                self.DT_Model.set_loads_between_nodes(load, [9,10])
+                self.DT_Model.set_displacements_between_nodes(displacement,[5,10])
+
+                self.DT_Model.run_simulation()
+            except Exception as e:
+                self._l.error("Simulation failed: %s", e, exc_info=True)
+                raise
+            
+            self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
+        
         else:
             # Horizontal displacement
             self._uh = 0.0
@@ -240,6 +245,8 @@ class DTService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
+                "horizontal_displacement_between": self.DT_Model.get_displacement_between_nodes(9, 10)[2],
+                "vertical_displacement_between": self.DT_Model.get_displacement_between_nodes(5, 10)[2],
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,

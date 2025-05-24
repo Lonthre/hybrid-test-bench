@@ -187,6 +187,8 @@ class PTEmulatorService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
+                "horizontal_displacement_between": self.PT_Model.get_displacement_between_nodes(9, 10)[2],
+                "vertical_displacement_between": self.PT_Model.get_displacement_between_nodes(5, 10)[2],
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
@@ -194,6 +196,7 @@ class PTEmulatorService:
                 "elapsed": time.time() - time_start,
             }
         }
+        
         self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
 
     def update_state(self, time_start):

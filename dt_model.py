@@ -552,7 +552,6 @@ class DtModel:
         
         ulok = [0,0,0]
 
-        BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
         xyz1 = self.model.my_nodes.nodal_coords[node1-1]
         xyz2 = self.model.my_nodes.nodal_coords[node2-1]
         L0 = sqrt((xyz1[0] - xyz2[0])**2 + (xyz1[1] - xyz2[1])**2 + (xyz1[2] - xyz2[2])**2) # length [mm]
