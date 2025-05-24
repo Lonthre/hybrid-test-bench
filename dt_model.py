@@ -645,7 +645,7 @@ class DtModel:
         #self._setup_model()
 
     def set_loads_between_nodes(self, F, nodes):
-        #self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
+        self._l.debug("Setting loads between nodes. F: %s, node: %s", F, nodes)
         # Set the loads for the model
         # t - time [s]
         # F - force [N]

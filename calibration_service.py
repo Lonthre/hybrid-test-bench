@@ -27,9 +27,9 @@ class CalibrationService:
     def get_calibration_data(self):
         return self.calibration_data
 
-    def set_calibration_state(self, displacements):
+    def set_calibration_state(self, state):
         self._l.debug("Setting calibration state...")
-        self.calibration_data['state'] = displacements
+        self.calibration_data['state'] = state
         return "Calibration data updated successfully."
     
     def get_DT_Model(self):
@@ -59,10 +59,10 @@ class CalibrationService:
 
         initial_guess = [E, Ec]
 
-        state = np.array([self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
-                                  self.DT_Model.get_displacement_between_nodes(5, 10)[2],
-                                  self.DT_Model.get_load(10, fx)[0],
-                                  self.DT_Model.get_load(10, fz)[0]])
+        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
+                            self.DT_Model.get_displacement_between_nodes(5, 10)[2],
+                            self.DT_Model.get_load(10, fx)[0],
+                            self.DT_Model.get_load(10, fz)[0]])
         
         self._l.debug(f"Digital Twin state: {state}")
         self._l.debug(f"Recieved state: {self.calibration_data['state']}")
@@ -92,6 +92,7 @@ class CalibrationService:
         try:
             #self._l.info(f"Setting displacements between nodes 5 and 10: {self.calibration_data['state'].tolist()[1]}")
             self.DT_Model.set_displacements_between_nodes(self.calibration_data['state'].tolist()[1],[5,10])
+            self._l.info(f"Setting loads on node 10: {self.calibration_data['state'].tolist()}")
             #self._l.info(f"Running simulation with E: {E}")
             self.DT_Model.run_simulation()
             #self._l.info("Simulation completed successfully.")
@@ -105,7 +106,7 @@ class CalibrationService:
                             self.DT_Model.get_load(10, fz)[0]])
         recieved_state = self.calibration_data['state']
         differences = recieved_state - state
-        #self._l.info(f"Displacements: {displacements}")
+        self._l.info(f"Displacements: {state}")
         #self._l.info(f"Received displacements: {recieved_displacements}")
         #self._l.info(f"Differences: {differences}")
         sum_sq_dff = sum(differences**2)
