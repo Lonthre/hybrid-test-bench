@@ -43,8 +43,8 @@ class PTEmulatorService:
         self.lh = lh_initial
         self.lv = lv_initial
 
-        self.vertical_period = 1.0
-        self.horizontal_period = 1.0
+        self.vertical_period = 2.0
+        self.horizontal_period = 2.0
 
         self.lh_wanted = 100
         self.uv_wanted = 20
@@ -52,7 +52,7 @@ class PTEmulatorService:
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
-        self.E_modulus = 70e3 # Pa (example value for aluminum)
+        self.E_modulus = 70e3 # MPa (example value for aluminum)
         self.Damage = 0.0
 
         # Initialize the PT model instance
@@ -135,8 +135,9 @@ class PTEmulatorService:
             try:
                 Load = self.H_ac.step_simulation()
                 Displacement = self.V_ac.step_simulation()
-                self.PT_Model.set_loads_between_nodes(1, Load, [9,10])
-                self.PT_Model.set_displacements_between_nodes(1, Displacement,[5,10])
+                self._l.info(f"Load: {Load}, Displacement: {Displacement}")
+                self.PT_Model.set_loads_between_nodes(Load, [9,10])
+                self.PT_Model.set_displacements_between_nodes(Displacement,[5,10])
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
@@ -148,9 +149,11 @@ class PTEmulatorService:
                 raise
             
             self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
+            self._l.info(f"Horizontal displacement: {self._uh}, Vertical displacement: {self._uv}, Horizontal force: {self._lh}, Vertical force: {self._lv}")
             
             # Fatigue - PT only
             if self.RFCA.update_if_peak(self._lv):
+                self._l.info(f"Running Fatigue test")
                 [self.Damage, self.E_modulus] = self.PT_Model.calculate_fatigue(self.RFCA.get_cycles())
                 self._l.info(f"Fatigue test result: {round(self.E_modulus)} MPa, Damage: {round(self.Damage,3)}")
 
@@ -167,7 +170,6 @@ class PTEmulatorService:
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
         self.E_modulus = self.PT_Model.get_beampars(16).E # Get the E modulus from the PT model
-        self.PT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the PT model
         #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
@@ -192,7 +194,12 @@ class PTEmulatorService:
                 "elapsed": time.time() - time_start,
             }
         }
+        self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
 
+    def update_state(self, time_start):
+        #self._l.info("Sending state to hybrid test bench physical twin.")
+        timestamp = time.time_ns()
+        # Publishes the new state
         state_message = {
             # "pt_displacements": self.PT_Model.get_displacement([10, 10, 10], [1, 2, 3])
             "horizontal_displacement": self.PT_Model.get_displacement_between_nodes(9, 10),
@@ -201,7 +208,6 @@ class PTEmulatorService:
             "vertical_force": self.PT_Model.get_load(10, fz)
             }
 
-        self._rabbitmq.send_message(ROUTING_KEY_STATE, message)
         self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, state_message)
         #self._l.debug(f"Message sent to {ROUTING_KEY_STATE}.")
         #self._l.debug(message)
@@ -209,6 +215,7 @@ class PTEmulatorService:
     def start_emulation(self):
         # Start the emulation loop
         self._l.info("Starting PTEmulator emulation loop.")
+        send_state_interval = 1
         try:
             while True:
                 #self._l.debug("Emulation loop iteration.")
@@ -219,7 +226,10 @@ class PTEmulatorService:
                 self.emulate_pt() 
                 # Send the new state to the hybrid test bench physical twin
                 self.send_state(time_start)
-                # Sleep until the next sample
+                if send_state_interval == 3:
+                    self.update_state(time_start)
+                    send_state_interval = 1
+                send_state_interval += 1                 # Sleep until the next sample
                 time_end = time.time()
                 time_diff = time_end - time_start
                 if time_diff < self._execution_interval:

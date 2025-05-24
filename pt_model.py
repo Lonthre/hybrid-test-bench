@@ -86,10 +86,6 @@ class PtModel:
         self._setup_elements()
         self._setup_model()
         self.run_simulation()
-
-
-        self.set_loads_between_nodes(0, 200, [9, 10])
-        self.set_displacements_between_nodes(0, 200, [5, 10])
         
 
     # nodal parameters (x, y, z)
@@ -350,9 +346,20 @@ class PtModel:
 
 
     def set_beampars(self, element, beampars, values):
-        #self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
+        self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
         # Set the beam parameters for the model
         # beampars - beam parameters [mm]
+        beam = self.elements[element-1]
+
+         # parameters of the element
+        beam3d_pars = {}
+        beam3d_pars['shape'] = 'generic'
+        beam3d_pars['A'] = beam.A
+        beam3d_pars['Ixx'] = beam.Ixx
+        beam3d_pars['Iyy'] = beam.Iyy
+        beam3d_pars['E'] = beam.E
+        beam3d_pars['Jv'] = beam.Jv
+        beam3d_pars['nodal_labels'] = beam.nodal_labels
         if not isinstance(beampars, list):
             beampars = [beampars]
             values = [values]
@@ -363,18 +370,22 @@ class PtModel:
                 match par:
                     # Set the beam parameters for the model
                     case 'A':
-                        self.elements[element-1].A = (values[idx])
+                        beam3d_pars['A'] = (values[idx])
                     case 'Ixx':
-                        self.elements[element-1].Ixx = (values[idx])
+                        beam3d_pars['Ixx'] = (values[idx])
                     case 'Iyy':
-                        self.elements[element-1].Iyy = (values[idx])
+                        beam3d_pars['Iyy'] = (values[idx])
                     case 'E':
-                        self.elements[element-1].E = (values[idx])
+                        beam3d_pars['E'] = (values[idx])
                     case 'Jv':
-                        self.elements[element-1].Jv = (values[idx])
+                        beam3d_pars['Jv'] = (values[idx])
                     case _:
                         self._l.error("Beam parameters not set. %s", par)
                         raise ValueError("Beam parameters not set. %s" % par)
+                    
+            self._l.debug("Beam parameters set. %s", beam3d_pars)
+            self.elements[element-1] = (beam3d(self.nodes, beam3d_pars))
+
         else:
             self._l.error("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s", np.shape(beampars), np.shape(values))
             raise ValueError("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s" % (np.shape(beampars), np.shape(values)))
@@ -428,7 +439,7 @@ class PtModel:
             delta_sigma_D = 125 #constant amplitude fatigue limit [N/mm2] - EUC3-1-9 Table A.1
             delta_sigma_C = delta_sigma_D #reference value at 2*10e6 cycles [N/mm2] - EUC3-1-9 Table A.1
             delta_sigma_L = 0.647 * delta_sigma_C #variable amplitude fatigue limit [N/mm2] - EUC3-1-9 Figure 8.1a
-            delta_sigma_Ed = cycle[0] * _lb3 * _h3/2/_Iyy3 *10e3 #M = F * a, sigma = M/W, W = I/y, [N/mm2] 
+            delta_sigma_Ed = cycle[0] * _lb3 * _h3/2/_Ixx3  #M = F * a, sigma = M/W, W = I/y, [N/mm2] 
             m1 = 5 #first slope parameter of the fatigue resistance curve - EUC3-1-9 Figure 8.1a
             m2 = 9 #slope parameter of the extende fatigue resistance curve - EUC3-1-9 Figure 8.1a
             if delta_sigma_Ed >= delta_sigma_D/gamma_Mf:
@@ -470,7 +481,7 @@ class PtModel:
 
         #self._setup_model()
 
-    def set_displacements(self, t, u, nodes, direction):
+    def set_displacements(self, u, nodes, direction):
         #self._l.debug("Setting displacements. t: %s, u: %s", t, u)
         i = np.shape(nodes)[0]
 
@@ -498,17 +509,17 @@ class PtModel:
 
         #self._setup_model()
 
-    def set_displacements_between_nodes(self, t, U, nodes):
+    def set_displacements_between_nodes(self, U, nodes):
         #self._l.debug("Setting displacements between nodes. t: %s, u: %s, nodes: %s", t, U, nodes)
         # Set the displacements for the model
         # t - time [s]
         # u - displacement [mm]
+
         if len(np.shape(nodes)) == 1:
             U = [U]
             nodes = [nodes]
 
         i, n = np.shape(nodes)
-        ulok = [0,0,0]
 
         if np.shape(U)[0] == np.shape(nodes)[0] and n == 2:
         
@@ -528,7 +539,7 @@ class PtModel:
                         F = 1 # default force [N]
                     #self._l.debug("Force. %s", F)
                 try:
-                    self.set_loads_between_nodes(1, F, nodes[_i])
+                    self.set_loads_between_nodes(F, nodes[_i])
                 except Exception as e:
                     self._l.error("Error setting loads between nodes: %s", e)
                     raise
@@ -538,7 +549,6 @@ class PtModel:
             raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(U), np.shape(nodes)))
         
         #self._l.debug("Displacement between nodes. %s", nodes)
-        #self._setup_model()
 
     def get_displacement(self, nodes, direction):
         #self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
@@ -571,7 +581,6 @@ class PtModel:
         
         ulok = [0,0,0]
 
-        BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
         xyz1 = self.model.my_nodes.nodal_coords[node1-1]
         xyz2 = self.model.my_nodes.nodal_coords[node2-1]
         L0 = sqrt((xyz1[0] - xyz2[0])**2 + (xyz1[1] - xyz2[1])**2 + (xyz1[2] - xyz2[2])**2) # length [mm]
@@ -579,10 +588,10 @@ class PtModel:
             dof1 = self.model.find_dofs([[node1, d+1]]).squeeze()
             dof2 = self.model.find_dofs([[node2, d+1]]).squeeze()
             ulok[d] = self.u[dof1, 1] - self.u[dof2, 1] # local displacement [mm]
-            L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0])**2 + (xyz1[1] - xyz2[1] + ulok[1])**2 + (xyz1[2] - xyz2[2] + ulok[2])**2) # length [mm]
-            delta_l = L1 - L0 # deltaL [mm]
+        L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0])**2 + (xyz1[1] - xyz2[1] + ulok[1])**2 + (xyz1[2] - xyz2[2] + ulok[2])**2) # length [mm]
+        delta_l = L1 - L0 # deltaL [mm]
         
-        #self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
+        self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
         return L0, L1, delta_l
 
     
@@ -617,7 +626,7 @@ class PtModel:
 
         #self._setup_model()
 
-    def set_loads(self, t, f, nodes, direction):
+    def set_loads(self, f, nodes, direction):
         #self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
         i = np.shape(nodes)[0]
 
@@ -665,7 +674,7 @@ class PtModel:
 
         #self._setup_model()
 
-    def set_loads_between_nodes(self, t, F, nodes):
+    def set_loads_between_nodes(self, F, nodes):
         #self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
         # Set the loads for the model
         # t - time [s]
@@ -729,10 +738,7 @@ class PtModel:
                 for d in range(3):
                     # Set Loads for the model
                     flok[d] = float(np.multiply(F, np.divide(llok[d] , l_f))) # load [N]
-                    self.set_loads(1, [flok[d],-flok[d]], nodes[_i], [d+1,d+1])
-            
-                    
-                    
+                    self.set_loads([flok[d],-flok[d]], nodes[_i], [d+1,d+1])
                     
         else:
             self._l.error("Loads and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(F), np.shape(nodes))
@@ -753,14 +759,18 @@ class PtModel:
         if np.shape(nodes) == np.shape(direction):
             for _i in range(i):
                 node = [nodes[_i], direction[_i]]
-                F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
-                if self._f[F_idx[0]] is None:
-                    #self._l.error("Load is not set.")
-                    fs.append(0.0)
-                    #raise ValueError("Load is not set.")
-                else:
-                    #self._l.debug("Load is set. %s", self._f[nodes[_i], direction[_i]])
-                    fs.append(self._f[F_idx[0]])
+                try:
+                    F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
+                    if self._f[F_idx[0]] is None:
+                        #self._l.error("Load is not set.")
+                        fs.append(0.0)
+                        #raise ValueError("Load is not set.")
+                    else:
+                        #self._l.debug("Load is set. %s", self._f[nodes[_i], direction[_i]])
+                        fs.append(self._f[F_idx[0]])
+                except Exception as e:
+                    self._l.error("Error finding load index: %s", e)
+                    fs = [0]
         else:
             self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
             raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))

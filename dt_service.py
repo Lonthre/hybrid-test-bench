@@ -42,8 +42,8 @@ class DTService:
         self.lh = lh_initial
         self.lv = lv_initial
 
-        self.vertical_period = 1.0
-        self.horizontal_period = 1.0
+        self.vertical_period = 2.0
+        self.horizontal_period = 2.0
 
         self.lh_wanted = 100
         self.uv_wanted = 20
@@ -51,7 +51,7 @@ class DTService:
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
-        self.E_modulus = 100e3 # Pa (example value for aluminum)
+        self.E_modulus = 100e3 # MPa (wrong example value for aluminum)
         # self.Damage = 0.0
 
         self.PT_Model_h_d = 0.0
@@ -101,7 +101,7 @@ class DTService:
         else:
             return None
 
-    def _read_displacements(self):
+    def _read_state(self):
         # Read the PT model from the RabbitMQ queue
         msg = self._rabbitmq.get_message(self.displacements_queue_name)
 
@@ -112,9 +112,10 @@ class DTService:
     
     def _check_pt_model(self):
         # Check if there are control commands
-        state = self._read_displacements()
+        state = self._read_state()
         #self._l.debug(f"Control command: {pt_model}")
         if state is not None:
+            self.state_received = True
             if 'horizontal_displacement' in state and state['horizontal_displacement'] is not None:
                 # self._l.info("Horizontal displacement: %s", state["horizontal_displacement"])
                 self.PT_Model_h_d = state["horizontal_displacement"][2]
@@ -127,11 +128,14 @@ class DTService:
             if 'vertical_force' in state and state['vertical_force'] is not None:
                 # self._l.info("Vertical force: %s", state["vertical_force"])
                 self.PT_Model_v_f = state["vertical_force"][0]
+        else:
+            self.state_received = False
+            # self._l.debug("No control command received.")
     
     def check_control_commands(self):
         # Check if there are control commands
         force_cmd = self._read_forces()
-        # self._l.debug(f"Control command: {force_cmd}")
+        #self._l.debug(f"Control command: {force_cmd}")
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
@@ -162,13 +166,27 @@ class DTService:
 
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
+            self._l.info(f"State received: {self.state_received}.")
             try:
-                # load = self.H_ac.step_simulation()
-                # displacement = self.V_ac.step_simulation()
-                # self.DT_Model.set_loads_between_nodes(1, load, [9,10])
-                # self.DT_Model.set_displacements_between_nodes(1, displacement,[5,10])
-                self.DT_Model.set_displacements_between_nodes(1, self.PT_Model_v_d, [5,10])
-                self.DT_Model.set_loads_between_nodes(1, self.PT_Model_h_f, [9,10])
+                load = self.H_ac.step_simulation()
+                displacement = self.V_ac.step_simulation()
+                if not self.state_received:
+                    self.DT_Model.set_loads_between_nodes(load, [9,10])
+                    self.DT_Model.set_displacements_between_nodes(displacement,[5,10])
+                else:
+                    rload = self.PT_Model_h_f
+                    rdisplacement = self.PT_Model_v_d
+                    self.DT_Model.set_loads_between_nodes(rload, [9,10])
+                    self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
+                    self.H_ac.calibrate(rload)
+                    self.V_ac.calibrate(rdisplacement)
+
+                    if abs((load - rload)/load) > 0.1:
+                        self._l.warning(f"Load difference: {abs((load - rload)/load)*100}%")
+                    
+                    if abs((displacement - rdisplacement)/displacement) > 0.1:
+                        self._l.warning(f"Displacement difference: {abs((displacement - rdisplacement)/displacement)*100}%")
+
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
@@ -182,14 +200,15 @@ class DTService:
             self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
         
             # Calibration service - DT only
-            try:
-                state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
-                self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
-                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-                self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
-            except Exception as e:
-                self._l.error("Calibration service failed: %s", e, exc_info=True)
-                raise
+            if self.state_received:
+                try:
+                    state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
+                    self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
+                    self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
+                    #self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
+                except Exception as e:
+                    self._l.error("Calibration service failed: %s", e, exc_info=True)
+                    raise
         else:
             # Horizontal displacement
             self._uh = 0.0

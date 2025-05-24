@@ -153,4 +153,17 @@ class ActuatorController:
         # Calibrate the actuator with the given data
         #self._l.info(f"Calibrating actuator with data: {calibration_data}.")
         self._S = calibration_data
-        self._l.info(f"Calibration data set to {self.calibration_data}.")
+
+        omega = self.FREQ
+        s0 = self.AMP
+        v0 = s0 * omega
+
+        s = self._S
+        v = self._V
+
+        ts = asin(s/(s0))/omega if abs(s / s0) <= 1 else 0 # time scale for the target motion
+        ts = ts if v >= 0 else pi/omega - ts
+
+        self._V = v0 * omega * cos(omega * ts)
+
+        self._l.info(f"Calibration data set to {calibration_data}.")

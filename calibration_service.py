@@ -19,7 +19,7 @@ class CalibrationService:
 
         self.calibration_data = {
             'state': None,
-            'boundaries': None
+            'boundaries': ([0, 0], [250e3,1])
         }
 
         self.DT_Model = model
@@ -55,8 +55,18 @@ class CalibrationService:
     def calibrate_model(self):
         self._l.debug("Starting calibration...")
         E = self.DT_Model.get_beampars(16).E  # Get the current value of E from the DT model
+        Ec = 0.5  # Set a default value for Ec
 
-        initial_guess = [E]
+        initial_guess = [E, Ec]
+
+        state = np.array([self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
+                                  self.DT_Model.get_displacement_between_nodes(5, 10)[2],
+                                  self.DT_Model.get_load(10, fx)[0],
+                                  self.DT_Model.get_load(10, fz)[0]])
+        
+        self._l.debug(f"Digital Twin state: {state}")
+        self._l.debug(f"Recieved state: {self.calibration_data['state']}")
+
 
         if self.calibration_data['boundaries'] is None:
             res = least_squares(self.cost, initial_guess, diff_step=.1)
@@ -75,31 +85,30 @@ class CalibrationService:
         # noise added to test calibration before DT is done
         # noise = 30  # Add noise to the guess
         self._l.info(f"Cost function called with P_guess: {P_guess}")
-        E = P_guess
+        E, Ec = P_guess
 
         self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
 
-
         try:
-            self._l.info(f"Setting displacements between nodes 5 and 10: {self.calibration_data['state'].tolist()[1]}")
-            self.DT_Model.set_diisplacements_between_nodes(1,self.calibration_data['state'].tolist()[1],[5,10])
-            self._l.info(f"Running simulation with E: {E}")
+            #self._l.info(f"Setting displacements between nodes 5 and 10: {self.calibration_data['state'].tolist()[1]}")
+            self.DT_Model.set_displacements_between_nodes(self.calibration_data['state'].tolist()[1],[5,10])
+            #self._l.info(f"Running simulation with E: {E}")
             self.DT_Model.run_simulation()
-            self._l.info("Simulation completed successfully.")
+            #self._l.info("Simulation completed successfully.")
         except:
             self._l.info(f"Cost for {P_guess}: Simulation failed")
             return 1e6  # Return a high cost to avoid this solution
         
-        displacements = np.array([self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
-                                  self.DT_Model.get_displacement_between_nodes(5, 10)[2],
-                                  self.DT_Model.get_load(10, fx)[0],
-                                  self.DT_Model.get_load(10, fz)[0]])
-        recieved_displacements = self.calibration_data['state']
-        differences = recieved_displacements - displacements
-        self._l.info(f"Displacements: {displacements}")
-        self._l.info(f"Received displacements: {recieved_displacements}")
-        self._l.info(f"Differences: {differences}")
+        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
+                            self.DT_Model.get_displacement_between_nodes(5, 10)[2],
+                            self.DT_Model.get_load(10, fx)[0],
+                            self.DT_Model.get_load(10, fz)[0]])
+        recieved_state = self.calibration_data['state']
+        differences = recieved_state - state
+        #self._l.info(f"Displacements: {displacements}")
+        #self._l.info(f"Received displacements: {recieved_displacements}")
+        #self._l.info(f"Differences: {differences}")
         sum_sq_dff = sum(differences**2)
         self._l.info(f"Cost for {P_guess}: {sum_sq_dff}")
-        self._l.info(f"Getting beam parameters: {self.DT_Model.get_beampars(16).E}")
+        #self._l.info(f"Getting beam parameters: {self.DT_Model.get_beampars(16).E}")
         return sum_sq_dff
