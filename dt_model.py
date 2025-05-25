@@ -500,8 +500,7 @@ class DtModel:
 
         if np.shape(U)[0] == np.shape(nodes)[0] and n == 2:
         
-            for _i in range(i):
-                
+            for _i in range(i):  
                 node = nodes[_i]
                 node1 = node[0]
                 node2 = node[1]
@@ -529,10 +528,12 @@ class DtModel:
                     U0 = self.BTW_U[BTW_idx[0]]
                     U1 = self.get_displacement_between_nodes(node1,node2)
                     if not U1 == 0:
-                        self._l.debug("Correcting scale")
+                        scale_diff = round((U0/U1-1) *100,2)
+                        self._l.debug("Correcting scale... %s pct.", scale_diff)
+                        
                         scale = scale * (U0/U1)
                     if abs(U0 - U1) > U[-i]*0.1:
-                        self._l.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
+                        self._l.warning("U0: %s exceeds U1: %s with more than 10pct of U: %s", U0, U1, U[_i])
 
                     self.BTW_U_scale[BTW_idx[0]] = scale
                     self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]

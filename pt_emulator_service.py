@@ -205,10 +205,10 @@ class PTEmulatorService:
         # Publishes the new state
         state_message = {
             # "pt_displacements": self.PT_Model.get_displacement([10, 10, 10], [1, 2, 3])
-            "horizontal_displacement": self.PT_Model.get_displacement_between_nodes(9, 10),
-            "vertical_displacement": self.PT_Model.get_displacement_between_nodes(5, 10),
-            "horizontal_force": self.PT_Model.get_load(10, fx),
-            "vertical_force": self.PT_Model.get_load(10, fz)
+            "horizontal_displacement": round(self.PT_Model.get_displacement_between_nodes(9, 10), 3),
+            "vertical_displacement": round(self.PT_Model.get_displacement_between_nodes(5, 10), 3),
+            "horizontal_force": round(self.PT_Model.get_load(10, fx), 3),
+            "vertical_force": round(self.PT_Model.get_load(10, fz), 3)
             }
 
         self._rabbitmq.send_message(ROUTING_KEY_DISPLACEMENT, state_message)

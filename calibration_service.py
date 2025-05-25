@@ -72,6 +72,7 @@ class CalibrationService:
                             self.DT_Model.get_load(10, fz)])
         
         self._l.info(f"Digital Twin state: {state}")
+        self._l.info("Recieved state: %s", self.calibration_data['state'])
 
 
         if self.calibration_data['boundaries'] is None:
@@ -79,7 +80,7 @@ class CalibrationService:
             res = least_squares(self.cost, initial_guess)
         else:
             self._l.debug(f"Using boundaries: {self.calibration_data['boundaries']}")
-            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'],diff_step=[0.01,0.001])
+            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'])
         self._l.info(f"Calibration result: {res}")
         self.accuracy = res.cost
         self.res = res.x[0]  # Extract the optimized value of E
@@ -99,8 +100,11 @@ class CalibrationService:
         self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
 
         try:
-            self.DT_Model.update_loads_from_displacements_between_nodes()
-            self.DT_Model.update_loads_from_displacements_between_nodes()
+            diff = 1
+            while diff > 1e-10:
+                F, U0, U = self.DT_Model.update_loads_from_displacements_between_nodes()
+                self._l.debug("Force needed to reach U: %s is F: %s, Current U: %s     - Diff: %s", U0, F, U, diff)
+                diff = U - U0
 
             self.DT_Model.run_simulation()
         except:

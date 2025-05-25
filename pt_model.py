@@ -449,7 +449,8 @@ class PtModel:
             else:
                 N_Rd = 0
             D = D + N_Ed/N_Rd #Damage - EUROCODE 3-1-9 (A.6)
-        E = self.get_beampars(16).E * (1-D)
+        fatigue_scale = 100
+        E = self.get_beampars(16).E * (1-D*fatigue_scale)
         E = 70e3 * (1-D) # Young's modulus [N/mm2]
         self.set_beampars(16, 'E', E)
         self._l.debug("Fatigue damage: %s, E-Module %s", D, E)
@@ -516,6 +517,13 @@ class PtModel:
         # t - time [s]
         # u - displacement [mm]
 
+        if not hasattr(self, 'BTW_U'):
+            # Initialize the lists if they don't exist
+            self.BTW_U_nodes = []
+            self.BTW_U = []
+            self.BTW_U_scale = []
+            BTW_idx = []
+
         if len(np.shape(nodes)) == 1:
             U = [U]
             nodes = [nodes]
@@ -528,17 +536,47 @@ class PtModel:
                 node = nodes[_i]
                 node1 = node[0]
                 node2 = node[1]
-                BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
-                if len(BTW_idx) == 0:
-                    F = 1 # default force [N]
+                if not len(self.BTW_U) == 0: 
+                    BTW_idx = np.where((node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[0]
                 else:
-                    F = self.BTW_f[BTW_idx[0]] # force [N]
+                    BTW_idx = []
+
+                if len(BTW_idx) == 0 or len(self.BTW_U) == 0:
+                    #self._l.debug("Displacement between nodes not found. %s, %s", node1, node2)
+                    F = 1 # default force [N]
+                    self.set_loads_between_nodes(F, node) # set force [N]
+                    self.run_simulation() # run simulation to get the displacement
                     delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
-                    F = 1 if delta_l == 0 else np.multiply(F, np.divide(U,delta_l)) # scale force [N]
-                    if isnan(F):
-                        self._l.info("Force is NaN. %s", F)
-                        F = 1 # default force [N]
-                    #self._l.debug("Force. %s", F)
+                    #self._l.debug("U: %s, delta_l: %s", U[_i], delta_l)
+                    scale = np.divide(F,delta_l) # scale factor
+                    self.BTW_U_nodes.append(node) # nodes
+                    self.BTW_U_scale.append(scale) # scale factor
+                    self.BTW_U.append(U[_i])
+
+                else:
+                    #self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
+                    scale = self.BTW_U_scale[BTW_idx[0]]
+                    U0 = self.BTW_U[BTW_idx[0]]
+                    U1 = self.get_displacement_between_nodes(node1,node2)
+                    if not U1 == 0:
+                        self._l.debug("Correcting scale")
+                        scale = scale * (U0/U1)
+                    if abs(U0 - U1) > U[-i]*0.1:
+                        self._l.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
+
+                    self.BTW_U_scale[BTW_idx[0]] = scale
+                    self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]
+
+                #self._l.debug("BTW_U: %s, BTW_U_nodes: %s, BTW_U_scale: %s", self.BTW_U, self.BTW_U_nodes, self.BTW_U_scale)
+                #self._l.debug("Scale factor for displacement. %s", scale)
+
+                F = U[_i] * scale # scale force [N]
+
+                if isnan(F):
+                    self._l.warning("Force is NaN. %s", F)
+                    F = 1 # default force [N]
+                self._l.debug("Force needed for set displacement. %s", F)
+
                 try:
                     self.set_loads_between_nodes(F, nodes[_i])
                 except Exception as e:
