@@ -187,8 +187,8 @@ class PTEmulatorService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
-                "horizontal_displacement_between": self.PT_Model.get_displacement_between_nodes(9, 10)[2],
-                "vertical_displacement_between": self.PT_Model.get_displacement_between_nodes(5, 10)[2],
+                "horizontal_displacement_between": self.PT_Model.get_displacement_between_nodes(9, 10),
+                "vertical_displacement_between": self.PT_Model.get_displacement_between_nodes(5, 10),
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
@@ -247,10 +247,10 @@ class PTEmulatorService:
     def get_data(self, node):
         # Get the data from the PT model
         try:
-            uh = float(self.PT_Model.get_displacement(node, fx)[0])
-            uv = float(self.PT_Model.get_displacement(node, fz)[0])
-            lh = float(self.PT_Model.get_load(node, fx)[0])
-            lv = float(self.PT_Model.get_load(node, fz)[0])
+            uh = float(self.PT_Model.get_displacement(node, fx))
+            uv = float(self.PT_Model.get_displacement(node, fz))
+            lh = float(self.PT_Model.get_load(node, fx))
+            lv = float(self.PT_Model.get_load(node, fz))
             return uh, uv, lh, lv
         except Exception as e:
             self._l.error("Failed to get data from PT model: %s", e, exc_info=True)

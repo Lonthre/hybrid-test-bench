@@ -63,16 +63,13 @@ class CalibrationService:
         Ec = 0.5  # Set a default value for Ec
 
         initial_guess = [E, Ec]
-        
-        self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
 
-        self._l.info(f"Recieved state: {self.calibration_data['state']}")
+        self.DT_Model.run_simulation()
 
-
-        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
-                            self.DT_Model.get_displacement_between_nodes(5, 10)[2],
-                            self.DT_Model.get_load(10, fx)[0],
-                            self.DT_Model.get_load(10, fz)[0]])
+        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10), 
+                            self.DT_Model.get_displacement_between_nodes(5, 10),
+                            self.DT_Model.get_load(10, fx),
+                            self.DT_Model.get_load(10, fz)])
         
         self._l.info(f"Digital Twin state: {state}")
 
@@ -82,7 +79,7 @@ class CalibrationService:
             res = least_squares(self.cost, initial_guess)
         else:
             self._l.debug(f"Using boundaries: {self.calibration_data['boundaries']}")
-            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'],diff_step=[0.001,0.001])
+            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'],diff_step=[0.01,0.001])
         self._l.info(f"Calibration result: {res}")
         self.accuracy = res.cost
         self.res = res.x[0]  # Extract the optimized value of E
@@ -95,26 +92,25 @@ class CalibrationService:
     def cost(self, P_guess):
         # noise added to test calibration before DT is done
         # noise = 30  # Add noise to the guess
+        self._l.debug("")
         self._l.debug(f"Cost function called with P_guess: {P_guess}")
         E, Ec = P_guess
 
         self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
 
         try:
-            #self._l.info(f"Setting displacements between nodes 5 and 10: {self.calibration_data['state'].tolist()[1]}")
             self.DT_Model.update_loads_from_displacements_between_nodes()
-            #self._l.info(f"Setting loads on node 10: {self.calibration_data['state'].tolist()}")
-            #self._l.info(f"Running simulation with E: {E}")
+            self.DT_Model.update_loads_from_displacements_between_nodes()
+
             self.DT_Model.run_simulation()
-            #self._l.info("Simulation completed successfully.")
         except:
             self._l.debug(f"Cost for {P_guess}: Simulation failed")
             return 1e6  # Return a high cost to avoid this solution
         
-        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10)[2], 
-                            self.DT_Model.get_displacement_between_nodes(5, 10)[2],
-                            self.DT_Model.get_load(10, fx)[0],
-                            self.DT_Model.get_load(10, fz)[0]])
+        state = np.array([  self.DT_Model.get_displacement_between_nodes(9, 10), 
+                            self.DT_Model.get_displacement_between_nodes(5, 10),
+                            self.DT_Model.get_load(10, fx),
+                            self.DT_Model.get_load(10, fz)])
         recieved_state = self.calibration_data['state']
         differences = recieved_state - state
         self._l.debug(f"State: {state}")
@@ -122,5 +118,6 @@ class CalibrationService:
         #self._l.info(f"Differences: {differences}")
         sum_sq_dff = sum(differences**2)
         self._l.debug(f"Cost for {P_guess}: {sum_sq_dff}")
+        self._l.debug("")
         #self._l.info(f"Getting beam parameters: {self.DT_Model.get_beampars(16).E}")
         return sum_sq_dff

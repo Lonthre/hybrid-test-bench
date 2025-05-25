@@ -296,7 +296,7 @@ class DtModel:
 
     # Step 5: Create the Finite Element Method model
     def _setup_model(self):
-        self._l.debug("Setting up model.")
+        #self._l.debug("Setting up model.")
         assert self.nodes is not None, "Nodes are not initialized."
         assert self.elements, "Elements are not initialized."
 
@@ -325,8 +325,9 @@ class DtModel:
             self.model_pars['g_f'] = np.array(self._fs)
         
         if self._un == [[]]:
-            self._l.info("Displacements are not set.")
+            #self._l.info("Displacements are not set.")
             #raise ValueError("Displacements are not set.")
+            1+1
         else:
             self.model_pars['dofs_u'] = np.array(self._un)
             self.model_pars['g_u'] = np.array(self._us)
@@ -385,6 +386,7 @@ class DtModel:
                         raise ValueError("Beam parameters not set. %s" % par)
                     
             self.elements[element-1] = (beam3d(self.nodes, beam3d_pars))
+            #self._setup_model()
             #self._l.debug("Beam parameters set. %s", beam3d_pars)
             #self._l.debug("Beam parameters set. %s", self.elements[element-1])
             #self._l.debug("Beam parameters set. %s", self.elements)
@@ -514,7 +516,7 @@ class DtModel:
                     F = 1 # default force [N]
                     self.set_loads_between_nodes(F, node) # set force [N]
                     self.run_simulation() # run simulation to get the displacement
-                    L0, L1, delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
+                    delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
                     #self._l.debug("U: %s, delta_l: %s", U[_i], delta_l)
                     scale = np.divide(F,delta_l) # scale factor
                     self.BTW_U_nodes.append(node) # nodes
@@ -525,10 +527,12 @@ class DtModel:
                     #self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
                     scale = self.BTW_U_scale[BTW_idx[0]]
                     U0 = self.BTW_U[BTW_idx[0]]
-                    U1 = self.get_displacement_between_nodes(node1,node2)[2]
+                    U1 = self.get_displacement_between_nodes(node1,node2)
                     if not U1 == 0:
                         self._l.debug("Correcting scale")
                         scale = scale * (U0/U1)
+                    if abs(U0 - U1) > U[-i]*0.1:
+                        self._l.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
 
                     self.BTW_U_scale[BTW_idx[0]] = scale
                     self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]
@@ -557,18 +561,18 @@ class DtModel:
 
     def update_loads_from_displacements_between_nodes(self):
         self._l.debug("Updating loads from displacements between nodes.")
-        self._l.debug("Updating load for displacement between following nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes, self.BTW_U, self.BTW_U_scale)
+        #self._l.debug("Updating load for displacement between following nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes, self.BTW_U, self.BTW_U_scale)
 
         # Update the loads between nodes
         self.run_simulation()
         for idx in range(len(self.BTW_U)):
-            self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes[idx], self.BTW_U[idx], self.BTW_U_scale[idx])
+            #self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes[idx], self.BTW_U[idx], self.BTW_U_scale[idx])
             nodes = self.BTW_U_nodes[idx]
             U0 = self.BTW_U[idx]  # scale factor
             scale = self.BTW_U_scale[idx]  # scale factor
 
-            U = self.get_displacement_between_nodes(nodes[0], nodes[1])[2]  # deltaL [mm]
-            self._l.debug("Current displacement between nodes. %s, U: %s", nodes, U)
+            U = self.get_displacement_between_nodes(nodes[0], nodes[1])  # deltaL [mm]
+            #self._l.debug("Current displacement between nodes. %s, U: %s", nodes, U)
             if isnan(U):
                 self._l.warning("Displacement is NaN. %s", U)
             elif U == U0:
@@ -576,13 +580,16 @@ class DtModel:
             elif U == 0:
                 self._l.warning("Displacement is 0. %s", U)
             else:
-                scale = scale * (U0/U)  # scale factor
-                self.BTW_U[idx] = U 
-                self.BTW_U_scale[idx] = scale
-                F = U0 * scale  # force [N]
+                if not U == 0:
+                    scale = scale * (U0/U)  # scale factor
+                    #self.BTW_U[idx] = U 
+                    self.BTW_U_scale[idx] = scale
+            #self._l.debug("Old displacement: %s, New displacement: %s", U0, U)
+            F = U0 * scale  # force [N]
             self._l.debug("Force needed for set displacement. F: %s --> U:", F, U0)
             self.set_loads_between_nodes(F, nodes)
-        self._l.debug("Loads updated from displacements between nodes.")
+        #self._l.debug("Loads updated from displacements between nodes.")
+        return F, U0, U
 
     def get_displacement(self, nodes, direction):
         self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
@@ -608,12 +615,19 @@ class DtModel:
             raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         
         self._l.debug("Displacement: %s", us)
+        if len(us) == 1: 
+            us = us[0]
         return us
     
     def get_displacement_between_nodes(self, node1, node2):
         self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
         # Get the displacements for the model
+        return self.get_distance_between_nodes(node1, node2)[2]
         
+    def get_distance_between_nodes(self, node1, node2):
+        self._l.debug("Getting distance between nodes. nodes: %s & %s", node1, node2)
+        # Get the displacements for the model
+
         ulok = [0,0,0]
 
         xyz1 = self.model.my_nodes.nodal_coords[node1-1]
@@ -816,6 +830,8 @@ class DtModel:
             self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
             raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         self._l.debug("Loads: %s", fs)
+        if len(fs) == 1: 
+            fs = fs[0]
         return fs
 
     def get_loads(self):
@@ -825,7 +841,7 @@ class DtModel:
 
     # Step 6: create and execute the simulation
     def run_simulation(self):
-        self._l.debug("Running simulation.")
+        #self._l.debug("Running simulation.")
 
         self._setup_model()
         

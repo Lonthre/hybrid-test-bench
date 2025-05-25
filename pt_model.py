@@ -533,7 +533,7 @@ class PtModel:
                     F = 1 # default force [N]
                 else:
                     F = self.BTW_f[BTW_idx[0]] # force [N]
-                    L0, L1, delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
+                    delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
                     F = 1 if delta_l == 0 else np.multiply(F, np.divide(U,delta_l)) # scale force [N]
                     if isnan(F):
                         self._l.info("Force is NaN. %s", F)
@@ -574,9 +574,16 @@ class PtModel:
             raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         
         self._l.debug("Displacement: %s", us)
+        if len(us) == 1: 
+            us = us[0]
         return us
     
     def get_displacement_between_nodes(self, node1, node2):
+        #self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
+        # Get the displacements for the model
+        return self.get_distance_between_nodes(node1, node2)[2]
+    
+    def get_distance_between_nodes(self, node1, node2):
         #self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
         # Get the displacements for the model
         
@@ -776,6 +783,8 @@ class PtModel:
             self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
             raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         self._l.debug("Loads: %s", fs)
+        if len(fs) == 1: 
+            fs = fs[0]
         return fs
 
     def get_loads(self):

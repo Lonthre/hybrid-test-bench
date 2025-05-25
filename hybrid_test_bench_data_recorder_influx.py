@@ -76,22 +76,22 @@ class HybridTestBenchDataRecorderInflux:
         
         # Horizontal displacement
         try:
-            self._uh = float(PT_Model.get_displacement(wanted_node, fx)[0])
+            self._uh = float(PT_Model.get_displacement(wanted_node, fx))
         except IndexError as e:
             self._l.error(f"Error retrieving horizontal displacement from u({wanted_node},1): %s", e, exc_info=True)
 
         # Vertical displacement
         try:
-            self._uv = float(PT_Model.get_displacement(wanted_node, fz)[0])
+            self._uv = float(PT_Model.get_displacement(wanted_node, fz))
         except IndexError as e:
             self._l.error(f"Error retrieving vertical displacement from u({wanted_node},1): %s", e, exc_info=True)
         
         #Forces
         try:
             # Vertical force
-            self._lh = float(PT_Model.get_load(wanted_node, fx)[0])
+            self._lh = float(PT_Model.get_load(wanted_node, fx))
             # Horizontal force
-            self._lv = float(PT_Model.get_load(wanted_node, fz)[0])
+            self._lv = float(PT_Model.get_load(wanted_node, fz))
         except Exception as e:
             self._l.error(f"Error retrieving forces from PT_Model.get_loads(): %s", e, exc_info=True)
             self._l.error(f"Forces not set: lh = {self._lh}, lv = {self._lv}")

@@ -118,16 +118,16 @@ class DTService:
             self.state_received = True
             if 'horizontal_displacement' in state and state['horizontal_displacement'] is not None:
                 # self._l.info("Horizontal displacement: %s", state["horizontal_displacement"])
-                self.PT_Model_h_d = state["horizontal_displacement"][2]
+                self.PT_Model_h_d = state["horizontal_displacement"]
             if 'vertical_displacement' in state and state['vertical_displacement'] is not None:
                 # self._l.info("Vertical displacement: %s", state["vertical_displacement"])
-                self.PT_Model_v_d = state["vertical_displacement"][2]
+                self.PT_Model_v_d = state["vertical_displacement"]
             if 'horizontal_force' in state and state['horizontal_force'] is not None:
                 # self._l.info("Horizontal force: %s", state["horizontal_force"])
-                self.PT_Model_h_f = state["horizontal_force"][0]
+                self.PT_Model_h_f = state["horizontal_force"]
             if 'vertical_force' in state and state['vertical_force'] is not None:
                 # self._l.info("Vertical force: %s", state["vertical_force"])
-                self.PT_Model_v_f = state["vertical_force"][0]
+                self.PT_Model_v_f = state["vertical_force"]
         else:
             self.state_received = False
             # self._l.debug("No control command received.")
@@ -249,8 +249,8 @@ class DTService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
-                "horizontal_displacement_between": self.DT_Model.get_displacement_between_nodes(9, 10)[2],
-                "vertical_displacement_between": self.DT_Model.get_displacement_between_nodes(5, 10)[2],
+                "horizontal_displacement_between": self.DT_Model.get_displacement_between_nodes(9, 10),
+                "vertical_displacement_between": self.DT_Model.get_displacement_between_nodes(5, 10),
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
@@ -293,10 +293,10 @@ class DTService:
     def get_data(self, node):
         # Get the data from the PT model
         try:
-            uh = float(self.DT_Model.get_displacement(node, fx)[0])
-            uv = float(self.DT_Model.get_displacement(node, fz)[0])
-            lh = float(self.DT_Model.get_load(node, fx)[0])
-            lv = float(self.DT_Model.get_load(node, fz)[0])
+            uh = float(self.DT_Model.get_displacement(node, fx))
+            uv = float(self.DT_Model.get_displacement(node, fz))
+            lh = float(self.DT_Model.get_load(node, fx))
+            lv = float(self.DT_Model.get_load(node, fz))
             return uh, uv, lh, lv
         except Exception as e:
             self._l.error("Failed to get data from PT model: %s", e, exc_info=True)
