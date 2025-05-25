@@ -188,14 +188,18 @@ class DTService:
 
             # Calibration service - DT only
             if self.state_received:
+                rload = self.PT_Model_h_f
+                rdisplacement = self.PT_Model_v_d
                 try:
                     self.DT_Model.set_loads_between_nodes(rload, [9,10])
                     self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
                     
                     state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
+                    self._l.info(f"State: {state}")
+                    #self.calibration_service.set_DT_Model(self.DT_Model) # Set the DT model in the calibration service
                     self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
-                    self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-                    self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
+                    self.DT_Model = self.calibration_service.calibrate_model(self.DT_Model) # Call the calibration service to calibrate the model
+                    #self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
                 except Exception as e:
                     self._l.error("Calibration service failed: %s", e, exc_info=True)
                     raise

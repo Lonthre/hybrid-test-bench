@@ -510,7 +510,8 @@ class PtModel:
         #self._setup_model()
 
     def set_displacements_between_nodes(self, U, nodes):
-        #self._l.debug("Setting displacements between nodes. t: %s, u: %s, nodes: %s", t, U, nodes)
+        self._l.debug("Setting displacements between nodes. u: %s, nodes: %s", U, nodes)
+        self.run_simulation()  # Ensure the model is up to date before setting displacements
         # Set the displacements for the model
         # t - time [s]
         # u - displacement [mm]

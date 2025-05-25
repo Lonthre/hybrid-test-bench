@@ -384,10 +384,10 @@ class DtModel:
                         self._l.error("Beam parameters not set. %s", par)
                         raise ValueError("Beam parameters not set. %s" % par)
                     
-            self._l.debug("Beam parameters set. %s", beam3d_pars)
             self.elements[element-1] = (beam3d(self.nodes, beam3d_pars))
-            self._l.debug("Beam parameters set. %s", self.elements[element-1])
-            self._l.debug("Beam parameters set. %s", self.elements)
+            #self._l.debug("Beam parameters set. %s", beam3d_pars)
+            #self._l.debug("Beam parameters set. %s", self.elements[element-1])
+            #self._l.debug("Beam parameters set. %s", self.elements)
 
         else:
             self._l.error("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s", np.shape(beampars), np.shape(values))
@@ -479,34 +479,62 @@ class DtModel:
 
     def set_displacements_between_nodes(self, U, nodes):
         self._l.debug("Setting displacements between nodes. u: %s, nodes: %s", U, nodes)
-        # self.run_simulation()
+        #self.run_simulation()
         # Set the displacements for the model
         # t - time [s]
         # u - displacement [mm]
+        if not hasattr(self, 'BTW_U'):
+            # Initialize the lists if they don't exist
+            self.BTW_U_nodes = []
+            self.BTW_U = []
+            self.BTW_U_scale = []
+            BTW_idx = []
+
         if len(np.shape(nodes)) == 1:
             U = [U]
             nodes = [nodes]
 
         i, n = np.shape(nodes)
-        ulok = [0,0,0]
 
         if np.shape(U)[0] == np.shape(nodes)[0] and n == 2:
         
             for _i in range(i):
+                
                 node = nodes[_i]
                 node1 = node[0]
                 node2 = node[1]
-                BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
-                if len(BTW_idx) == 0:
-                    F = 1 # default force [N]
+                #self._l.debug("Setting displacement between nodes. %s, %s", node1, node2)
+                if not len(self.BTW_U) == 0: 
+                    BTW_idx = np.where((node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[0]
                 else:
-                    F = self.BTW_f[BTW_idx[0]] # force [N]
+                    BTW_idx = []
+
+                if len(BTW_idx) == 0 or len(self.BTW_U) == 0:
+                    #self._l.debug("Displacement between nodes not found. %s, %s", node1, node2)
+                    F = 1 # default force [N]
+                    self.set_loads_between_nodes(F, node) # set force [N]
+                    self.run_simulation() # run simulation to get the displacement
                     L0, L1, delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
-                    F = 1 if F == 0 or delta_l == 0 else np.multiply(F, np.divide(U,delta_l)) # scale force [N]
-                    if isnan(F):
-                        self._l.info("Force is NaN. %s", F)
-                        F = 1 # default force [N]
-                    self._l.debug("Force. %s", F)
+                    #self._l.debug("U: %s, delta_l: %s", U[_i], delta_l)
+                    scale = np.divide(F,delta_l) # scale factor
+                    self.BTW_U_nodes.append(node) # nodes
+                    self.BTW_U_scale.append(scale) # scale factor
+                    self.BTW_U.append(U[_i])
+
+                else:
+                    #self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
+                    scale = self.BTW_U_scale[BTW_idx[0]] # force [N]
+                    self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]
+
+                #self._l.debug("BTW_U: %s, BTW_U_nodes: %s, BTW_U_scale: %s", self.BTW_U, self.BTW_U_nodes, self.BTW_U_scale)
+                #self._l.debug("Scale factor for displacement. %s", scale)
+
+                F = U[_i] * scale # scale force [N]
+
+                if isnan(F):
+                    self._l.warning("Force is NaN. %s", F)
+                    F = 1 # default force [N]
+                self._l.debug("Force needed for set displacement. %s", F)
                 try:
                     self.set_loads_between_nodes(F, nodes[_i])
                 except Exception as e:
@@ -519,6 +547,37 @@ class DtModel:
         
         #self._l.debug("Displacement between nodes. %s", nodes)
         #self._setup_model()
+
+    def update_loads_from_displacements_between_nodes(self):
+        self._l.debug("Updating loads from displacements between nodes.")
+        self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes, self.BTW_U, self.BTW_U_scale)
+
+        # Update the loads between nodes
+        self.run_simulation()
+        for idx in range(len(self.BTW_U)):
+            self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes[idx], self.BTW_U[idx], self.BTW_U_scale[idx])
+            nodes = self.BTW_U_nodes[idx]
+            U_target = self.BTW_U[idx]  # scale factor
+            scale = self.BTW_U_scale[idx]  # scale factor
+
+            F = U_target * scale
+
+            U = self.get_displacement_between_nodes(nodes[0], nodes[1])[2]  # deltaL [mm]
+            self._l.debug("Current displacement between nodes. %s, U: %s", nodes, U)
+            if isnan(U):
+                self._l.warning("Displacement is NaN. %s", U)
+            elif U == U_target:
+                self._l.info("Displacement is equall to target. U: %s = %s (Target) ", U, U_target)
+            elif U == 0:
+                self._l.warning("Displacement is 0. %s", U)
+            else:
+                scale = F / U  # scale factor
+                self.BTW_U[idx] = U 
+                self.BTW_U_scale[idx] = scale
+                F = U_target * scale  # force [N]
+            self._l.debug("Force needed for set displacement. F: %s --> U:", F, U_target)
+            self.set_loads_between_nodes(F, nodes)
+        self._l.debug("Loads updated from displacements between nodes.")
 
     def get_displacement(self, nodes, direction):
         self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
@@ -607,36 +666,33 @@ class DtModel:
         
         if np.shape(f) == np.shape(nodes) == np.shape(direction):
             for _i in range(i):
-                if not f[_i] == 0:
-                    #self._l.debug("Setting loads. %s, %s, %s", f[_i], nodes[_i], direction[_i])
-                    node = [nodes[_i], direction[_i]]
-                    if self._fn == [[]]:
-                        #self._l.debug("Setting first load. %s = %s", node, self._fn)
-                        self._f.append(f[_i])
-                        self._fn[0] = node
-                        self._fs[0] = [0, f[_i]]
-                    #else:
-                        #self._l.debug("Finding idx. Node[0]: %s = %s & Node[1]: %s = %s", node[0], self._fn, node[1], self._fs)
-                    F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
-                    #self._l.debug("Finding idx. %s, %s", F_idx, len([F_idx]))
-
-                    if len(F_idx) == 0:
-                        self._f.append(f[_i])
-                        self._fn.append(node)
-                        self._fs.append([0, f[_i]])
-                        #self._l.debug("Setting new load. %s = %s", len(self._f), f[_i])
-                        #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
-                        #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
-                        #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fn), self._fs)
-                    else:
-                        self._f[F_idx[0]] = f[_i]
-                        self._fs[F_idx[0]] = [0, self._f[F_idx[0]]]
-                        #self._l.debug("Setting existing load. %s = %s", F_idx[0], self._f[_i])
-                        #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
-                        #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
-                        #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fs), self._fs)
+                #self._l.debug("Setting loads. %s, %s, %s", f[_i], nodes[_i], direction[_i])
+                node = [nodes[_i], direction[_i]]
+                if self._fn == [[]]:
+                    #self._l.debug("Setting first load. %s = %s", node, self._fn)
+                    self._f.append(f[_i])
+                    self._fn[0] = node
+                    self._fs[0] = [0, f[_i]]
                 #else:
-                    #self._l.debug("Skipping load. %s, %s, %s", f[_i], nodes[_i], direction[_i])
+                    #self._l.debug("Finding idx. Node[0]: %s = %s & Node[1]: %s = %s", node[0], self._fn, node[1], self._fs)
+                F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0] 
+                #self._l.debug("Finding idx. %s, %s", F_idx, len([F_idx]))
+
+                if len(F_idx) == 0:
+                    self._f.append(f[_i])
+                    self._fn.append(node)
+                    self._fs.append([0, f[_i]])
+                    #self._l.debug("Setting new load. %s = %s", len(self._f), f[_i])
+                    #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
+                    #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
+                    #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fn), self._fs)
+                else:
+                    self._f[F_idx[0]] = f[_i]
+                    self._fs[F_idx[0]] = [0, self._f[F_idx[0]]]
+                    #self._l.debug("Setting existing load. %s = %s", F_idx[0], self._f[_i])
+                    #self._l.debug("Existing load [f]. %s - %s", np.shape(self._f), self._f)
+                    #self._l.debug("Existing load [fn]. %s - %s", np.shape(self._fn), self._fn)
+                    #self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fs), self._fs)
                 
         else:
             self._l.error("Load, node and direction shape mismatch. Load shape: %s, Node shape: %s, Direction shape: %s", np.shape(f), np.shape(nodes), np.shape(direction))
@@ -663,6 +719,7 @@ class DtModel:
             if len(F) == 1:
                 F = F[0]
 
+
         else:
             # If F is an int, convert it to a numpy array
             #self._l.debug("F is not a list. %s", F)
@@ -680,10 +737,10 @@ class DtModel:
         
             for _i in range(i):
                 node = nodes[_i]
+                node1 = node[0]
+                node2 = node[1]
                 # Check if the node is already in the list of nodes
                 if not len(self.BTW) == 0: 
-                    node1 = node[0]
-                    node2 = node[1]
                     BTW_idx = np.where((node1 == np.array(self.BTW)[:, 0]) & (node2 == np.array(self.BTW)[:, 1]))[0]
                 if len(BTW_idx) == 0:
                     self.BTW.append(node)
@@ -710,7 +767,10 @@ class DtModel:
                 for d in range(3):
                     # Set Loads for the model
                     flok[d] = float(np.multiply(F, np.divide(llok[d] , l_f))) # load [N]
-                    self.set_loads([flok[d],-flok[d]], nodes[_i], [d+1,d+1])
+                    if not llok[d] == 0:
+                        self.set_loads([flok[d],-flok[d]], nodes[_i], [d+1,d+1])
+                    else:
+                        self._l.info("Skipping load")
             
                     
                     
@@ -723,8 +783,8 @@ class DtModel:
         #self._setup_model()
 
     def get_load(self, nodes, direction):
-        #self._l.debug("Getting loads. nodes: %s, direction: %s", nodes, direction)
         # Get the load for the model]
+        self._l.debug("Getting loads. nodes: %s, direction: %s", nodes, direction)
         if isinstance(nodes, int):
             nodes = [nodes]
             direction = [direction]
@@ -750,7 +810,7 @@ class DtModel:
         else:
             self._l.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
             raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
-        #self._l.debug("Loads: %s", fs)
+        self._l.debug("Loads: %s", fs)
         return fs
 
     def get_loads(self):
