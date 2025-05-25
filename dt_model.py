@@ -523,7 +523,14 @@ class DtModel:
 
                 else:
                     #self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
-                    scale = self.BTW_U_scale[BTW_idx[0]] # force [N]
+                    scale = self.BTW_U_scale[BTW_idx[0]]
+                    U0 = self.BTW_U[BTW_idx[0]]
+                    U1 = self.get_displacement_between_nodes(node1,node2)[2]
+                    if not U1 == 0:
+                        self._l.debug("Correcting scale")
+                        scale = scale * (U0/U1)
+
+                    self.BTW_U_scale[BTW_idx[0]] = scale
                     self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]
 
                 #self._l.debug("BTW_U: %s, BTW_U_nodes: %s, BTW_U_scale: %s", self.BTW_U, self.BTW_U_nodes, self.BTW_U_scale)
@@ -550,32 +557,30 @@ class DtModel:
 
     def update_loads_from_displacements_between_nodes(self):
         self._l.debug("Updating loads from displacements between nodes.")
-        self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes, self.BTW_U, self.BTW_U_scale)
+        self._l.debug("Updating load for displacement between following nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes, self.BTW_U, self.BTW_U_scale)
 
         # Update the loads between nodes
         self.run_simulation()
         for idx in range(len(self.BTW_U)):
             self._l.debug("Updating load for displacement between nodes. %s, U: %s, Scale: %s", self.BTW_U_nodes[idx], self.BTW_U[idx], self.BTW_U_scale[idx])
             nodes = self.BTW_U_nodes[idx]
-            U_target = self.BTW_U[idx]  # scale factor
+            U0 = self.BTW_U[idx]  # scale factor
             scale = self.BTW_U_scale[idx]  # scale factor
-
-            F = U_target * scale
 
             U = self.get_displacement_between_nodes(nodes[0], nodes[1])[2]  # deltaL [mm]
             self._l.debug("Current displacement between nodes. %s, U: %s", nodes, U)
             if isnan(U):
                 self._l.warning("Displacement is NaN. %s", U)
-            elif U == U_target:
-                self._l.info("Displacement is equall to target. U: %s = %s (Target) ", U, U_target)
+            elif U == U0:
+                self._l.info("Displacement is equall to target. U: %s = %s (Target) ", U, U0)
             elif U == 0:
                 self._l.warning("Displacement is 0. %s", U)
             else:
-                scale = F / U  # scale factor
+                scale = scale * (U0/U)  # scale factor
                 self.BTW_U[idx] = U 
                 self.BTW_U_scale[idx] = scale
-                F = U_target * scale  # force [N]
-            self._l.debug("Force needed for set displacement. F: %s --> U:", F, U_target)
+                F = U0 * scale  # force [N]
+            self._l.debug("Force needed for set displacement. F: %s --> U:", F, U0)
             self.set_loads_between_nodes(F, nodes)
         self._l.debug("Loads updated from displacements between nodes.")
 

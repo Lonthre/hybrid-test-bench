@@ -53,7 +53,7 @@ class CalibrationService:
         return "Boundaries updated successfully."
     
     def calibrate_model(self, model=None):
-        self._l.Info("Starting calibration...")
+        self._l.info("Starting calibration...")
         if model is not None:
             self._l.debug("Using provided model for calibration.")
             self.DT_Model = model
@@ -74,7 +74,7 @@ class CalibrationService:
                             self.DT_Model.get_load(10, fx)[0],
                             self.DT_Model.get_load(10, fz)[0]])
         
-        self._l.debug(f"Digital Twin state: {state}")
+        self._l.info(f"Digital Twin state: {state}")
 
 
         if self.calibration_data['boundaries'] is None:
@@ -82,7 +82,7 @@ class CalibrationService:
             res = least_squares(self.cost, initial_guess)
         else:
             self._l.debug(f"Using boundaries: {self.calibration_data['boundaries']}")
-            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'])
+            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'],diff_step=[0.001,0.001])
         self._l.info(f"Calibration result: {res}")
         self.accuracy = res.cost
         self.res = res.x[0]  # Extract the optimized value of E
