@@ -449,9 +449,9 @@ class PtModel:
             else:
                 N_Rd = 0
             D = D + N_Ed/N_Rd #Damage - EUROCODE 3-1-9 (A.6)
-        fatigue_scale = 100
+        fatigue_scale = 1e8
         E = self.get_beampars(16).E * (1-D*fatigue_scale)
-        E = 70e3 * (1-D) # Young's modulus [N/mm2]
+        E = 70e3 * (1-D*fatigue_scale) # Young's modulus [N/mm2]
         self.set_beampars(16, 'E', E)
         self._l.debug("Fatigue damage: %s, E-Module %s", D, E)
         return [D,E]
