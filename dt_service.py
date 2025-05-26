@@ -42,8 +42,8 @@ class DTService:
         self.lh = lh_initial
         self.lv = lv_initial
 
-        self.vertical_period = 1.0
-        self.horizontal_period = 1.0
+        self.vertical_period = 2.0
+        self.horizontal_period = 2.0
 
         self.lh_wanted = 100
         self.uv_wanted = 20
@@ -51,7 +51,7 @@ class DTService:
         self.max_vertical_displacement = max_vertical_displacement
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
-        self.E_modulus = 100e3 # Pa (example value for aluminum)
+        self.E_modulus = 100e3 # MPa (wrong example value for aluminum)
         # self.Damage = 0.0
 
         self.PT_Model_h_d = 0.0
@@ -101,7 +101,7 @@ class DTService:
         else:
             return None
 
-    def _read_displacements(self):
+    def _read_state(self):
         # Read the PT model from the RabbitMQ queue
         msg = self._rabbitmq.get_message(self.displacements_queue_name)
 
@@ -112,26 +112,30 @@ class DTService:
     
     def _check_pt_model(self):
         # Check if there are control commands
-        state = self._read_displacements()
+        state = self._read_state()
         #self._l.debug(f"Control command: {pt_model}")
         if state is not None:
+            self.state_received = True
             if 'horizontal_displacement' in state and state['horizontal_displacement'] is not None:
                 # self._l.info("Horizontal displacement: %s", state["horizontal_displacement"])
-                self.PT_Model_h_d = state["horizontal_displacement"][2]
+                self.PT_Model_h_d = state["horizontal_displacement"]
             if 'vertical_displacement' in state and state['vertical_displacement'] is not None:
                 # self._l.info("Vertical displacement: %s", state["vertical_displacement"])
-                self.PT_Model_v_d = state["vertical_displacement"][2]
+                self.PT_Model_v_d = state["vertical_displacement"]
             if 'horizontal_force' in state and state['horizontal_force'] is not None:
                 # self._l.info("Horizontal force: %s", state["horizontal_force"])
-                self.PT_Model_h_f = state["horizontal_force"][0]
+                self.PT_Model_h_f = state["horizontal_force"]
             if 'vertical_force' in state and state['vertical_force'] is not None:
                 # self._l.info("Vertical force: %s", state["vertical_force"])
-                self.PT_Model_v_f = state["vertical_force"][0]
+                self.PT_Model_v_f = state["vertical_force"]
+        else:
+            self.state_received = False
+            # self._l.debug("No control command received.")
     
     def check_control_commands(self):
         # Check if there are control commands
         force_cmd = self._read_forces()
-        # self._l.debug(f"Control command: {force_cmd}")
+        #self._l.debug(f"Control command: {force_cmd}")
         if force_cmd is not None:
             if 'forces' in force_cmd and force_cmd['forces'] is not None:
                 self._l.info("Force command: %s", force_cmd["forces"])
@@ -162,18 +166,51 @@ class DTService:
 
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
+            self._l.info(f"State received: {self.state_received}.")
             try:
-                # load = self.H_ac.step_simulation()
-                # displacement = self.V_ac.step_simulation()
-                # self.DT_Model.set_loads_between_nodes(1, load, [9,10])
-                # self.DT_Model.set_displacements_between_nodes(1, displacement,[5,10])
-                self.DT_Model.set_displacements_between_nodes(1, self.PT_Model_v_d, [5,10])
-                self.DT_Model.set_loads_between_nodes(1, self.PT_Model_h_f, [9,10])
+                if self.state_received:
+                    old_load = self.H_ac.step_simulation()
+                    old_displacement = self.V_ac.step_simulation()
+                    rload = self.PT_Model_h_f
+                    rdisplacement = self.PT_Model_v_d
+                    self.H_ac.calibrate(rload)
+                    self.V_ac.calibrate(rdisplacement)
+                    
+                    if abs((old_load - rload)/old_load) > 0.1:
+                        self._l.warning(f"Load difference: {abs((old_load - rload)/old_load)*100}%")
+                    
+                    if abs((old_displacement - rdisplacement)/old_displacement) > 0.1:
+                        self._l.warning(f"Displacement difference: {abs((old_displacement - rdisplacement)/old_displacement)*100}%")
+
             except Exception as e:
                 self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
                 raise
 
+            # Calibration service - DT only
+            if self.state_received:
+                rload = self.PT_Model_h_f
+                rdisplacement = self.PT_Model_v_d
+                try:
+                    self.DT_Model.set_loads_between_nodes(rload, [9,10])
+                    self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
+                    
+                    state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
+                    self._l.info(f"State: {state}")
+                    #self.calibration_service.set_DT_Model(self.DT_Model) # Set the DT model in the calibration service
+                    self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
+                    self.DT_Model = self.calibration_service.calibrate_model(self.DT_Model) # Call the calibration service to calibrate the model
+                    #self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
+                except Exception as e:
+                    self._l.error("Calibration service failed: %s", e, exc_info=True)
+                    raise
+
             try:
+                load = self.H_ac.step_simulation()
+                displacement = self.V_ac.step_simulation()
+
+                self.DT_Model.set_loads_between_nodes(load, [9,10])
+                self.DT_Model.set_displacements_between_nodes(displacement,[5,10])
+
                 self.DT_Model.run_simulation()
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
@@ -181,15 +218,6 @@ class DTService:
             
             self._uh, self._uv, self._lh, self._lv = self.get_data(10) # Get the data from the PT model (10 is the node number)
         
-            # Calibration service - DT only
-            try:
-                state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
-                self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
-                self.calibration_service.calibrate_model() # Call the calibration service to calibrate the model
-                self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
-            except Exception as e:
-                self._l.error("Calibration service failed: %s", e, exc_info=True)
-                raise
         else:
             # Horizontal displacement
             self._uh = 0.0
@@ -221,6 +249,8 @@ class DTService:
                 "vertical_displacement": self._uv,
                 "horizontal_force": self._lh,
                 "vertical_force": self._lv,
+                "horizontal_displacement_between": self.DT_Model.get_displacement_between_nodes(9, 10),
+                "vertical_displacement_between": self.DT_Model.get_displacement_between_nodes(5, 10),
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
@@ -263,10 +293,10 @@ class DTService:
     def get_data(self, node):
         # Get the data from the PT model
         try:
-            uh = float(self.DT_Model.get_displacement(node, fx)[0])
-            uv = float(self.DT_Model.get_displacement(node, fz)[0])
-            lh = float(self.DT_Model.get_load(node, fx)[0])
-            lv = float(self.DT_Model.get_load(node, fz)[0])
+            uh = float(self.DT_Model.get_displacement(node, fx))
+            uv = float(self.DT_Model.get_displacement(node, fz))
+            lh = float(self.DT_Model.get_load(node, fx))
+            lv = float(self.DT_Model.get_load(node, fz))
             return uh, uv, lh, lv
         except Exception as e:
             self._l.error("Failed to get data from PT model: %s", e, exc_info=True)
