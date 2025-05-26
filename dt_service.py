@@ -325,7 +325,8 @@ if __name__ == "__main__":
         lh_initial = 0.0,
         lv_initial = 0.0,
         max_vertical_displacement = 15.0,
-        min_e_modulus = 99e3, # set to 99.000 for now, should be closer to 50.000
+        min_e_modulus = 70e3, # Should be adjusted to 50.000 MPa, or 60.000 MPa - but, for now we use 70.000 MPa, 
+            # so we can show the monitoring and the reconfiguration of the DT model working.
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 

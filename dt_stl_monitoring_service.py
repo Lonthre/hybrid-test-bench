@@ -54,7 +54,7 @@ class DT_STLMonitoringService:
         # Declare the variables that will correspond to the above signals.
         self._spec.declare_var('E_modulus', 'float')
         self._spec.declare_var('min_e_modulus', 'float')
-        self._spec.spec = 'always((E_modulus <= min_e_modulus) implies (eventually[0:60](E_modulus >= min_e_modulus)))'
+        self._spec.spec = 'always((E_modulus <= min_e_modulus) implies (eventually[0:3](E_modulus >= min_e_modulus)))'
         self._spec.parse()
 
     def setup(self):
