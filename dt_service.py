@@ -30,7 +30,7 @@ fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6 # force and moment indices
 
 class DTService:
     
-    def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, execution_interval, rabbitmq_config):
+    def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, min_e_modulus, execution_interval, rabbitmq_config):
         # Initialize the DTService with initial values and configuration
         self._l = logging.getLogger("DTService")
         self._l.info("Initializing DTService.")
@@ -49,6 +49,7 @@ class DTService:
         self.uv_wanted = 20
 
         self.max_vertical_displacement = max_vertical_displacement
+        self.min_e_modulus = min_e_modulus
         self._execution_interval = execution_interval # seconds
         self._force_on = 0.0
         self.E_modulus = 100e3 # MPa (wrong example value for aluminum)
@@ -254,6 +255,7 @@ class DTService:
                 "E_modulus": self.E_modulus,
                 "force_on": self._force_on,
                 "max_vertical_displacement": self.max_vertical_displacement,
+                "min_e_modulus": self.min_e_modulus,
                 "execution_interval": self._execution_interval,
                 "elapsed": time.time() - time_start,
             }
@@ -322,7 +324,9 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        max_vertical_displacement = 70.0,
+        max_vertical_displacement = 15.0,
+        min_e_modulus = 70e3, # Should be adjusted to 50.000 MPa, or 60.000 MPa - but, for now we use 70.000 MPa, 
+            # so we can show the monitoring and the reconfiguration of the DT model working.
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
 
