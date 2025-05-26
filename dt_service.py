@@ -324,7 +324,7 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        max_vertical_displacement = 70.0,
+        max_vertical_displacement = 15.0,
         min_e_modulus = 99e3, # set to 99.000 for now, should be closer to 50.000
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])

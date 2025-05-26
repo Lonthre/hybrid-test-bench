@@ -47,7 +47,7 @@ class DT_STLMonitoringService:
 
         self._client = InfluxDBClient(url=url, token=token, org=self._org)
 
-        self._l = logging.getLogger("PT_STLMonitoringService")
+        self._l = logging.getLogger("STLMonitoringService")
 
         # Specification
         self._spec = rtamt.StlDenseTimeSpecification()
@@ -126,7 +126,7 @@ class DT_STLMonitoringService:
             records.append({
                 "measurement": "robustness",
                 "tags": {
-                    "source": "pt_stl_monitor"
+                    "source": "dt_stl_monitor"
                 },
                 "time": ts,
                 "fields": {
