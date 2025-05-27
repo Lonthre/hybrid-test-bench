@@ -62,7 +62,6 @@ class CalibrationService:
         E = self.DT_Model.get_beampars(16).E  # Get the current value of E from the DT model
         Ec = 0.5  # Set a default value for Ec
 
-        initial_guess = [E, Ec]
 
         self.DT_Model.run_simulation()
 
@@ -74,14 +73,17 @@ class CalibrationService:
         self._l.info(f"Digital Twin state: {state}")
         self._l.info("Recieved state: %s", self.calibration_data['state'])
 
+        #E = E * self.calibration_data['boundaries'][3]/state[3]
+
+        initial_guess = [E, Ec]
 
         if self.calibration_data['boundaries'] is None:
             self._l.debug("No boundaries set for calibration. Using default boundaries.")
-            res = least_squares(self.cost, initial_guess)
+            res = least_squares(self.cost, initial_guess,max_nfev=2,ftol = 1e-16)
         else:
             self._l.debug(f"Using boundaries: {self.calibration_data['boundaries']}")
-            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'])
-        self._l.info(f"Calibration result: {res}")
+            res = least_squares(self.cost, initial_guess, bounds=self.calibration_data['boundaries'],max_nfev=2,ftol = 1e-16)
+        #self._l.info(f"Calibration result: {res}")
         self.accuracy = res.cost
         self.res = res.x[0]  # Extract the optimized value of E
 
@@ -94,7 +96,7 @@ class CalibrationService:
         # noise added to test calibration before DT is done
         # noise = 30  # Add noise to the guess
         self._l.debug("")
-        self._l.debug(f"Cost function called with P_guess: {P_guess}")
+        #self._l.debug(f"Cost function called with P_guess: {P_guess}")
         E, Ec = P_guess
 
         self.DT_Model.set_beampars(16, 'E', E) # Set the beam parameters for the DT model
@@ -103,10 +105,11 @@ class CalibrationService:
             diff = 1
             while diff > 1e-10:
                 F, U0, U = self.DT_Model.update_loads_from_displacements_between_nodes()
-                self._l.debug("Force needed to reach U: %s is F: %s, Current U: %s     - Diff: %s", U0, F, U, diff)
+                #self._l.debug("Force needed to reach U: %s is F: %s, Current U: %s     - Diff: %s", U0, F, U, diff)
                 diff = U - U0
 
             self.DT_Model.run_simulation()
+            #self._l.info("Simulation completed successfully.")
         except:
             self._l.debug(f"Cost for {P_guess}: Simulation failed")
             return 1e6  # Return a high cost to avoid this solution
@@ -117,11 +120,26 @@ class CalibrationService:
                             self.DT_Model.get_load(10, fz)])
         recieved_state = self.calibration_data['state']
         differences = recieved_state - state
-        self._l.debug(f"State: {state}")
+        #self._l.debug(f"State: {state}")
         #self._l.info(f"Received displacements: {recieved_displacements}")
         #self._l.info(f"Differences: {differences}")
+
         sum_sq_dff = sum(differences**2)
-        self._l.debug(f"Cost for {P_guess}: {sum_sq_dff}")
-        self._l.debug("")
+
+        differences_pct = self.get_pct_diff(recieved_state, state)
+        sum_sq_dff_pct = sum(differences_pct**2)
+
+        #self._l.debug(f"Cost for {P_guess}: {sum_sq_dff}")
+        #self._l.debug("")
         #self._l.info(f"Getting beam parameters: {self.DT_Model.get_beampars(16).E}")
         return sum_sq_dff
+    
+    def get_pct_diff(self, r_state, state):
+        pct = []
+        for i,s in enumerate(r_state):
+            if s == 0:
+                pct.append( 0)
+            else:
+                pct.append(state[i]/s-1)
+        return np.array(pct)
+

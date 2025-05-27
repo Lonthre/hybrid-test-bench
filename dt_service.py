@@ -167,52 +167,63 @@ class DTService:
 
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
-            self._l.info(f"State received: {self.state_received}.")
-            try:
-                if self.state_received:
-                    old_load = self.H_ac.step_simulation()
-                    old_displacement = self.V_ac.step_simulation()
-                    rload = self.PT_Model_h_f
-                    rdisplacement = self.PT_Model_v_d
-                    self.H_ac.calibrate(rload)
-                    self.V_ac.calibrate(rdisplacement)
-                    
-                    if abs((old_load - rload)/old_load) > 0.1:
-                        self._l.warning(f"Load difference: {abs((old_load - rload)/old_load)*100}%")
-                    
-                    if abs((old_displacement - rdisplacement)/old_displacement) > 0.1:
-                        self._l.warning(f"Displacement difference: {abs((old_displacement - rdisplacement)/old_displacement)*100}%")
-
-            except Exception as e:
-                self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
-                raise
-
-            # Calibration service - DT only
+            #self._l.info(f"State received: {self.state_received}.")
             if self.state_received:
                 rload = self.PT_Model_h_f
                 rdisplacement = self.PT_Model_v_d
+                try:
+                    load = self.H_ac.get_state() # Get the load from the actuator controller
+                    displacement = self.V_ac.get_state() # Get the displacement from the actuator controller
+                    #self._l.info(f"Load: {load}, Displacement: {displacement}")
+                    #self._l.info(f"PT Model Load: {rload}, PT Model Displacement: {rdisplacement}")
+
+                    if abs(load-rload) > 0.1*self.lh_wanted:
+                        self._l.warning(f"Load difference: {round(abs(load-rload),2)} > {self.lh_wanted * 0.1}")
+                        self.H_ac.calibrate(rload)
+                    
+                    if abs(displacement-rdisplacement) > 0.1*self.uv_wanted:
+                        self._l.warning(f"Displacement difference: {round(abs(displacement-rdisplacement),2)} > {self.uv_wanted * 0.1}")
+                        self.V_ac.calibrate(rdisplacement)
+
+                    pfload, lfault = self.H_ac.pf_state(rload)
+                    pfdisplacement, dfault = self.V_ac.pf_state(rdisplacement)
+                    
+                    #self._l.info(f"PF Load: {pfload}, PF Displacement: {pfdisplacement}")
+                    #self._l.info(f"PF Load Fault: {lfault}, PF Displacement Fault: {dfault}")
+
+                except Exception as e:
+                    self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
+                    raise
+
+                # Calibration service - DT only
                 try:
                     self.DT_Model.set_loads_between_nodes(rload, [9,10])
                     self.DT_Model.set_displacements_between_nodes(rdisplacement,[5,10])
                     
                     state = np.array([self.PT_Model_h_d, self.PT_Model_v_d,self.PT_Model_h_f, self.PT_Model_v_f]) # Get the displacements from the PT model
                     self._l.info(f"State: {state}")
-                    #self.calibration_service.set_DT_Model(self.DT_Model) # Set the DT model in the calibration service
+
                     self.calibration_service.set_calibration_state(state) # Set the displacements in the calibration service
                     self.DT_Model = self.calibration_service.calibrate_model(self.DT_Model) # Call the calibration service to calibrate the model
-                    #self.DT_Model = self.calibration_service.get_DT_Model() # Get the calibrated model
+
                 except Exception as e:
                     self._l.error("Calibration service failed: %s", e, exc_info=True)
                     raise
-
+            #else:
+                #self._l.warning("No state received from PT model. Using default values.")
+            
             try:
                 load = self.H_ac.step_simulation()
                 displacement = self.V_ac.step_simulation()
 
+            except Exception as e:
+                self._l.error("Failed to step simulation: %s", e, exc_info=True)
+
+            try:
                 self.DT_Model.set_loads_between_nodes(load, [9,10])
                 self.DT_Model.set_displacements_between_nodes(displacement,[5,10])
-
                 self.DT_Model.run_simulation()
+
             except Exception as e:
                 self._l.error("Simulation failed: %s", e, exc_info=True)
                 raise
@@ -232,8 +243,6 @@ class DTService:
             # self._r = r[something] # in case we need this for the emulator, we can put it here
 
         self.E_modulus = self.DT_Model.get_beampars(16).E # Get the E modulus from the DT model
-        # self.DT_Model.set_beampars(16, 'E', self.E_modulus) # Set the E modulus in the DT model
-        #self._l.info("PT script executed successfully.")
         
     def send_state(self, time_start):
         #self._l.info("Sending state to hybrid test bench physical twin.")
@@ -324,8 +333,8 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        max_vertical_displacement = 15.0,
-        min_e_modulus = 70e3, # Should be adjusted to 50.000 MPa, or 60.000 MPa - but, for now we use 70.000 MPa, 
+        max_vertical_displacement = 70.0,
+        min_e_modulus = 70e3 # Should be adjusted to 50.000 MPa, or 60.000 MPa - but for now we use 70.000 MPa, 
             # so we can show the monitoring and the reconfiguration of the DT model working.
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
