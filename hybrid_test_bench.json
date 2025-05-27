@@ -20,27 +20,39 @@
      "data": [
       {
        "type": "cell",
-       "id": "0edcf36cdfe0b000"
+       "id": "0eee50a80e2e1000"
       },
       {
        "type": "cell",
-       "id": "0edcf386d7e0b000"
+       "id": "0eee50a810ee1000"
       },
       {
        "type": "cell",
-       "id": "0edcf3bd83e0b000"
+       "id": "0eee50a8146e1000"
       },
       {
        "type": "cell",
-       "id": "0edcf3d972e0b000"
+       "id": "0eee50a816ee1000"
       },
       {
        "type": "cell",
-       "id": "0edcf3f9fc20b000"
+       "id": "0eee50a8196e1000"
       },
       {
        "type": "cell",
-       "id": "0edcf44123a0b000"
+       "id": "0eee50a81bee1000"
+      },
+      {
+       "type": "cell",
+       "id": "0eee50a81e6e1000"
+      },
+      {
+       "type": "cell",
+       "id": "0eee6beb2b2e1000"
+      },
+      {
+       "type": "cell",
+       "id": "0eee6bee296e1000"
       }
      ]
     },
@@ -51,7 +63,7 @@
   },
   "included": [
    {
-    "id": "0edcf36cdfe0b000",
+    "id": "0eee50a80e2e1000",
     "type": "cell",
     "attributes": {
      "x": 0,
@@ -63,13 +75,13 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf36cdfe0b000"
+       "id": "0eee50a80e2e1000"
       }
      }
     }
    },
    {
-    "id": "0edcf386d7e0b000",
+    "id": "0eee50a810ee1000",
     "type": "cell",
     "attributes": {
      "x": 0,
@@ -81,13 +93,13 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf386d7e0b000"
+       "id": "0eee50a810ee1000"
       }
      }
     }
    },
    {
-    "id": "0edcf3bd83e0b000",
+    "id": "0eee50a8146e1000",
     "type": "cell",
     "attributes": {
      "x": 4,
@@ -99,13 +111,13 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf3bd83e0b000"
+       "id": "0eee50a8146e1000"
       }
      }
     }
    },
    {
-    "id": "0edcf3d972e0b000",
+    "id": "0eee50a816ee1000",
     "type": "cell",
     "attributes": {
      "x": 4,
@@ -117,13 +129,13 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf3d972e0b000"
+       "id": "0eee50a816ee1000"
       }
      }
     }
    },
    {
-    "id": "0edcf3f9fc20b000",
+    "id": "0eee50a8196e1000",
     "type": "cell",
     "attributes": {
      "x": 8,
@@ -135,13 +147,13 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf3f9fc20b000"
+       "id": "0eee50a8196e1000"
       }
      }
     }
    },
    {
-    "id": "0edcf44123a0b000",
+    "id": "0eee50a81bee1000",
     "type": "cell",
     "attributes": {
      "x": 8,
@@ -153,21 +165,75 @@
      "view": {
       "data": {
        "type": "view",
-       "id": "0edcf44123a0b000"
+       "id": "0eee50a81bee1000"
+      }
+     }
+    }
+   },
+   {
+    "id": "0eee50a81e6e1000",
+    "type": "cell",
+    "attributes": {
+     "x": 0,
+     "y": 8,
+     "w": 4,
+     "h": 4
+    },
+    "relationships": {
+     "view": {
+      "data": {
+       "type": "view",
+       "id": "0eee50a81e6e1000"
+      }
+     }
+    }
+   },
+   {
+    "id": "0eee6beb2b2e1000",
+    "type": "cell",
+    "attributes": {
+     "x": 8,
+     "y": 8,
+     "w": 4,
+     "h": 4
+    },
+    "relationships": {
+     "view": {
+      "data": {
+       "type": "view",
+       "id": "0eee6beb2b2e1000"
+      }
+     }
+    }
+   },
+   {
+    "id": "0eee6bee296e1000",
+    "type": "cell",
+    "attributes": {
+     "x": 4,
+     "y": 8,
+     "w": 4,
+     "h": 4
+    },
+    "relationships": {
+     "view": {
+      "data": {
+       "type": "view",
+       "id": "0eee6bee296e1000"
       }
      }
     }
    },
    {
     "type": "view",
-    "id": "0edcf36cdfe0b000",
+    "id": "0eee50a80e2e1000",
     "attributes": {
      "name": "E-Module",
      "properties": {
       "shape": "chronograf-v2",
       "queries": [
        {
-        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"E_modulus\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\" or r[\"_measurement\"] == \"dt\")\n  |> filter(fn: (r) => r[\"_field\"] == \"E_modulus\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\" or r[\"source\"] == \"dt\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
         "editMode": "advanced",
         "name": "",
         "builderConfig": {
@@ -215,32 +281,23 @@
         "scale": "linear"
        }
       },
-      "type": "xy",
+      "type": "line-plus-single-stat",
       "legend": {},
-      "geom": "line",
       "colors": [
        {
-        "id": "431e8aa5-1f83-4802-82ad-e4a3df408fab",
-        "type": "scale",
-        "hex": "#31C0F6",
-        "name": "Nineteen Eighty Four",
-        "value": 0
-       },
-       {
-        "id": "98eebe4e-d460-47a0-bb3b-cf92ea9a577d",
-        "type": "scale",
-        "hex": "#A500A5",
-        "name": "Nineteen Eighty Four",
-        "value": 0
-       },
-       {
-        "id": "3ad8b462-0c9c-49a9-8dc5-3217d0e7c0ad",
-        "type": "scale",
-        "hex": "#FF7E27",
-        "name": "Nineteen Eighty Four",
+        "id": "base",
+        "type": "text",
+        "hex": "#00C9FF",
+        "name": "laser",
         "value": 0
        }
       ],
+      "prefix": "",
+      "suffix": " MPa",
+      "decimalPlaces": {
+       "isEnforced": true,
+       "digits": 0
+      },
       "note": "",
       "showNoteWhenEmpty": false,
       "xColumn": "_time",
@@ -265,7 +322,7 @@
    },
    {
     "type": "view",
-    "id": "0edcf386d7e0b000",
+    "id": "0eee50a810ee1000",
     "attributes": {
      "name": "Force status",
      "properties": {
@@ -305,8 +362,8 @@
        {
         "id": "base",
         "type": "text",
-        "hex": "#00C9FF",
-        "name": "laser",
+        "hex": "#ffffff",
+        "name": "white",
         "value": 0
        }
       ],
@@ -321,14 +378,14 @@
    },
    {
     "type": "view",
-    "id": "0edcf3bd83e0b000",
+    "id": "0eee50a8146e1000",
     "attributes": {
      "name": "Horizontal displacement",
      "properties": {
       "shape": "chronograf-v2",
       "queries": [
        {
-        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"horizontal_displacement\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dt\" or r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"horizontal_displacement\")\n  |> filter(fn: (r) => r[\"source\"] == \"dt\" or r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
         "editMode": "advanced",
         "name": "",
         "builderConfig": {
@@ -426,14 +483,14 @@
    },
    {
     "type": "view",
-    "id": "0edcf3d972e0b000",
+    "id": "0eee50a816ee1000",
     "attributes": {
      "name": "Horizontal force",
      "properties": {
       "shape": "chronograf-v2",
       "queries": [
        {
-        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"horizontal_displacement\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dt\" or r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"horizontal_force\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\" or r[\"source\"] == \"dt\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
         "editMode": "advanced",
         "name": "",
         "builderConfig": {
@@ -531,14 +588,14 @@
    },
    {
     "type": "view",
-    "id": "0edcf3f9fc20b000",
+    "id": "0eee50a8196e1000",
     "attributes": {
      "name": "Vertical displacement",
      "properties": {
       "shape": "chronograf-v2",
       "queries": [
        {
-        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"vertical_displacement\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dt\" or r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"vertical_displacement\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\" or r[\"source\"] == \"dt\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
         "editMode": "advanced",
         "name": "",
         "builderConfig": {
@@ -614,12 +671,12 @@
       ],
       "note": "",
       "showNoteWhenEmpty": false,
-      "xColumn": "",
+      "xColumn": "_time",
       "generateXAxisTicks": null,
       "xTotalTicks": 0,
       "xTickStart": 0,
       "xTickStep": 0,
-      "yColumn": "",
+      "yColumn": "_value",
       "generateYAxisTicks": null,
       "yTotalTicks": 0,
       "yTickStart": 0,
@@ -636,14 +693,341 @@
    },
    {
     "type": "view",
-    "id": "0edcf44123a0b000",
+    "id": "0eee50a81bee1000",
     "attributes": {
      "name": "Vertical force",
      "properties": {
       "shape": "chronograf-v2",
       "queries": [
        {
-        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"vertical_displacement\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\" or r[\"_measurement\"] == \"dt\")\n  |> filter(fn: (r) => r[\"_field\"] == \"vertical_force\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\" or r[\"source\"] == \"dt\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "editMode": "advanced",
+        "name": "",
+        "builderConfig": {
+         "buckets": [],
+         "tags": [
+          {
+           "key": "_measurement",
+           "values": [],
+           "aggregateFunctionType": "filter"
+          }
+         ],
+         "functions": [
+          {
+           "name": "mean"
+          }
+         ],
+         "aggregateWindow": {
+          "period": "auto",
+          "fillValues": false
+         }
+        }
+       }
+      ],
+      "axes": {
+       "x": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       },
+       "y": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       }
+      },
+      "type": "xy",
+      "legend": {},
+      "geom": "line",
+      "colors": [
+       {
+        "id": "431e8aa5-1f83-4802-82ad-e4a3df408fab",
+        "type": "scale",
+        "hex": "#31C0F6",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "98eebe4e-d460-47a0-bb3b-cf92ea9a577d",
+        "type": "scale",
+        "hex": "#A500A5",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "3ad8b462-0c9c-49a9-8dc5-3217d0e7c0ad",
+        "type": "scale",
+        "hex": "#FF7E27",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       }
+      ],
+      "note": "",
+      "showNoteWhenEmpty": false,
+      "xColumn": "_time",
+      "generateXAxisTicks": null,
+      "xTotalTicks": 0,
+      "xTickStart": 0,
+      "xTickStep": 0,
+      "yColumn": "_value",
+      "generateYAxisTicks": null,
+      "yTotalTicks": 0,
+      "yTickStart": 0,
+      "yTickStep": 0,
+      "shadeBelow": false,
+      "position": "overlaid",
+      "timeFormat": "",
+      "hoverDimension": "",
+      "legendColorizeRows": false,
+      "legendOpacity": 0,
+      "legendOrientationThreshold": 0
+     }
+    }
+   },
+   {
+    "type": "view",
+    "id": "0eee50a81e6e1000",
+    "attributes": {
+     "name": "E-Module (Clone)",
+     "properties": {
+      "shape": "chronograf-v2",
+      "queries": [
+       {
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"E_modulus\")\n  |> filter(fn: (r) => r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+        "editMode": "advanced",
+        "name": "",
+        "builderConfig": {
+         "buckets": [],
+         "tags": [
+          {
+           "key": "_measurement",
+           "values": [],
+           "aggregateFunctionType": "filter"
+          }
+         ],
+         "functions": [
+          {
+           "name": "mean"
+          }
+         ],
+         "aggregateWindow": {
+          "period": "auto",
+          "fillValues": false
+         }
+        }
+       }
+      ],
+      "axes": {
+       "x": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       },
+       "y": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       }
+      },
+      "type": "line-plus-single-stat",
+      "legend": {},
+      "colors": [
+       {
+        "id": "base",
+        "type": "text",
+        "hex": "#513CC6",
+        "name": "planet",
+        "value": 0
+       },
+       {
+        "id": "7b240f4a-3729-48fc-9a94-1ac2c1289bd0",
+        "type": "scale",
+        "hex": "#BE2EE4",
+        "name": "Solid Purple",
+        "value": 0
+       },
+       {
+        "id": "a8858250-a380-4635-98a8-fd4b61a4a17a",
+        "type": "scale",
+        "hex": "#BE2EE4",
+        "name": "Solid Purple",
+        "value": 0
+       },
+       {
+        "id": "e8beb453-be48-4c1b-909e-c33b7db1181d",
+        "type": "scale",
+        "hex": "#BE2EE4",
+        "name": "Solid Purple",
+        "value": 0
+       }
+      ],
+      "prefix": "",
+      "suffix": " MPa",
+      "decimalPlaces": {
+       "isEnforced": true,
+       "digits": 0
+      },
+      "note": "",
+      "showNoteWhenEmpty": false,
+      "xColumn": "_time",
+      "generateXAxisTicks": null,
+      "xTotalTicks": 0,
+      "xTickStart": 0,
+      "xTickStep": 0,
+      "yColumn": "_value",
+      "generateYAxisTicks": null,
+      "yTotalTicks": 0,
+      "yTickStart": 0,
+      "yTickStep": 0,
+      "shadeBelow": false,
+      "position": "overlaid",
+      "timeFormat": "",
+      "hoverDimension": "",
+      "legendColorizeRows": false,
+      "legendOpacity": 0,
+      "legendOrientationThreshold": 0
+     }
+    }
+   },
+   {
+    "type": "view",
+    "id": "0eee6beb2b2e1000",
+    "attributes": {
+     "name": "Vertical displacement between",
+     "properties": {
+      "shape": "chronograf-v2",
+      "queries": [
+       {
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dt\" or r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"vertical_displacement_between\")\n  |> filter(fn: (r) => r[\"source\"] == \"dt\" or r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "editMode": "advanced",
+        "name": "",
+        "builderConfig": {
+         "buckets": [],
+         "tags": [
+          {
+           "key": "_measurement",
+           "values": [],
+           "aggregateFunctionType": "filter"
+          }
+         ],
+         "functions": [
+          {
+           "name": "mean"
+          }
+         ],
+         "aggregateWindow": {
+          "period": "auto",
+          "fillValues": false
+         }
+        }
+       }
+      ],
+      "axes": {
+       "x": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       },
+       "y": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       }
+      },
+      "type": "xy",
+      "legend": {},
+      "geom": "line",
+      "colors": [
+       {
+        "id": "431e8aa5-1f83-4802-82ad-e4a3df408fab",
+        "type": "scale",
+        "hex": "#31C0F6",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "98eebe4e-d460-47a0-bb3b-cf92ea9a577d",
+        "type": "scale",
+        "hex": "#A500A5",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "3ad8b462-0c9c-49a9-8dc5-3217d0e7c0ad",
+        "type": "scale",
+        "hex": "#FF7E27",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       }
+      ],
+      "note": "",
+      "showNoteWhenEmpty": false,
+      "xColumn": "_time",
+      "generateXAxisTicks": null,
+      "xTotalTicks": 0,
+      "xTickStart": 0,
+      "xTickStep": 0,
+      "yColumn": "_value",
+      "generateYAxisTicks": null,
+      "yTotalTicks": 0,
+      "yTickStart": 0,
+      "yTickStep": 0,
+      "shadeBelow": false,
+      "position": "overlaid",
+      "timeFormat": "",
+      "hoverDimension": "",
+      "legendColorizeRows": false,
+      "legendOpacity": 0,
+      "legendOrientationThreshold": 0
+     }
+    }
+   },
+   {
+    "type": "view",
+    "id": "0eee6bee296e1000",
+    "attributes": {
+     "name": "Horizontal displacement between",
+     "properties": {
+      "shape": "chronograf-v2",
+      "queries": [
+       {
+        "text": "from(bucket: \"hybrid_test_bench\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"dt\" or r[\"_measurement\"] == \"emulator\")\n  |> filter(fn: (r) => r[\"_field\"] == \"horizontal_displacement_between\")\n  |> filter(fn: (r) => r[\"source\"] == \"dt\" or r[\"source\"] == \"emulator\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
         "editMode": "advanced",
         "name": "",
         "builderConfig": {

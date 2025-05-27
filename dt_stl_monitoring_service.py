@@ -31,10 +31,10 @@ assert os.path.exists(bench_startup_dir), 'hybrid-test-bench startup directory n
 sys.path.append(bench_startup_dir)
 
 from communication.server.rabbitmq import Rabbitmq
-from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_FORCES
-import pt_model as pt_model
+from communication.shared.protocol import ROUTING_KEY_STATE, ROUTING_KEY_DT_FORCES
+import dt_model as dt_model
 
-class PT_STLMonitoringService:
+class DT_STLMonitoringService:
 
     def __init__(self, rabbitmq_config, influxdb_config):
 
@@ -52,9 +52,9 @@ class PT_STLMonitoringService:
         # Specification
         self._spec = rtamt.StlDenseTimeSpecification()
         # Declare the variables that will correspond to the above signals.
-        self._spec.declare_var('vertical_displacement', 'float')
-        self._spec.declare_var('max_vertical_displacement', 'float')
-        self._spec.spec = 'always((vertical_displacement >= max_vertical_displacement) implies (eventually[0:60](vertical_displacement <= max_vertical_displacement)))'
+        self._spec.declare_var('E_modulus', 'float')
+        self._spec.declare_var('min_e_modulus', 'float')
+        self._spec.spec = 'always((E_modulus <= min_e_modulus) implies (eventually[0:3](E_modulus >= min_e_modulus)))'
         self._spec.parse()
 
     def setup(self):
@@ -64,52 +64,55 @@ class PT_STLMonitoringService:
         self._query_api = self._client.query_api()
         self._write_api = self._client.write_api(write_options=SYNCHRONOUS)
 
-        # Subscribe to any message coming from the Hybrid Test Bench physical twin.
+        # Subscribe to any message coming from the Hybrid Test Bench digital twin.
         self._rabbitmq.subscribe(routing_key=ROUTING_KEY_STATE,
                                 on_message_callback=self.process_state_sample)
 
-        self._l.info(f"PT_STLMonitoringService setup complete.")
+        self._l.info(f"DT_STLMonitoringService setup complete.")
 
     def query_influxdb(self):
-        # Define your Flux query: Query the relevant forces and displacements.
         # We set a stop time of -3s to ensure that the data is aligned from the different measurements.
 
         flux_query = f'''
             from(bucket: "{self._bucket}")
             |> range(start: -1h, stop: -3s)
-            |> filter(fn: (r) => r["_measurement"] == "emulator")
-            |> filter(fn: (r) => r["_field"] == "vertical_displacement" or r["_field"] == "max_vertical_displacement")
-            |> filter(fn: (r) => r["source"] == "emulator")
+            |> filter(fn: (r) => r["_measurement"] == "dt")
+            |> filter(fn: (r) => r["_field"] == "E_modulus" or r["_field"] == "min_e_modulus")
+            |> filter(fn: (r) => r["source"] == "dt")
             |> aggregateWindow(every: 3s, fn: last, createEmpty: true)
             |> yield(name: "last")
         '''
         # Execute the query
         result = self._query_api.query(org=self._org, query=flux_query)
 
-        vertical_displacement = []
-        max_vertical_displacement = []
+        e_modulus = []
+        min_e_modulus = []
 
         for table in result:
             for record in table.records:
                 ts = record.get_time().timestamp()
-                if record.get_field() == 'max_vertical_displacement':
-                    max_vertical_displacement.append([ts, record.get_value()])
-                elif record.get_field() == 'vertical_displacement':
-                    vertical_displacement.append([ts, record.get_value()])
+                if record.get_field() == 'min_e_modulus':
+                    min_e_modulus.append([ts, record.get_value()])
+                elif record.get_field() == 'E_modulus':
+                    e_modulus.append([ts, record.get_value()])
 
-        # Generate a time-series signal for max_vertical_displacement
-        # max_vertical_displacement = [[ts, 5.0] for ts, _ in vertical_displacement]
+        # Align the two signals by timestamp
+        e_modulus_dict = dict(e_modulus)
+        min_e_modulus_dict = dict(min_e_modulus)
+        common_ts = sorted(set(e_modulus_dict.keys()) & set(min_e_modulus_dict.keys()))
+        aligned_e_modulus = [[ts, e_modulus_dict[ts]] for ts in common_ts]
+        aligned_min_e_modulus = [[ts, min_e_modulus_dict[ts]] for ts in common_ts]
+    
+        assert len(aligned_e_modulus) == len(aligned_min_e_modulus), 'E_modulus and minimum e_modulus data not aligned.'
 
-        assert len(vertical_displacement) == len(max_vertical_displacement), 'Vertical displacement and maximum vertical displacement data not aligned.'
+        return aligned_e_modulus, aligned_min_e_modulus
 
-        return vertical_displacement, max_vertical_displacement
-
-    def compute_robustness(self, vertical_displacement, max_vertical_displacement):
+    def compute_robustness(self, e_modulus, min_e_modulus):
         # Evaluate rtamt on the signals and get the robustness.
         print("Evaluating rtamt on the signals.")
         robustness = self._spec.evaluate(
-            ['vertical_displacement', vertical_displacement],
-            ['max_vertical_displacement', max_vertical_displacement]
+            ['E_modulus', e_modulus],
+            ['min_e_modulus', min_e_modulus]
         )
         self._l.info(f"Robustness: {robustness}")
         return robustness
@@ -123,7 +126,7 @@ class PT_STLMonitoringService:
             records.append({
                 "measurement": "robustness",
                 "tags": {
-                    "source": "pt_stl_monitor"
+                    "source": "dt_stl_monitor"
                 },
                 "time": ts,
                 "fields": {
@@ -137,11 +140,11 @@ class PT_STLMonitoringService:
         # Log the values received.
         self._l.info(f"Received state sample: {body_json}")
         
-        # Get the displacement history from the influxdb, and process the displacement data into signals that ramt can understand.
-        vertical_displacement, max_vertical_displacement = self.query_influxdb()
+        # Get the displacement history from the influxdb, and process the e_modulus data into signals that ramt can understand.
+        e_modulus, min_e_modulus = self.query_influxdb()
 
         # Evaluate ramt on the signals and get the robustness.
-        robustness = self.compute_robustness(vertical_displacement, max_vertical_displacement)
+        robustness = self.compute_robustness(e_modulus, min_e_modulus)
 
         self._l.debug(f"Robustness: {robustness}")
 
@@ -166,9 +169,9 @@ if __name__ == "__main__":
     # The startup.conf comes from the hybrid test bench repository.
     config = ConfigFactory.parse_file(startup_conf)
 
-    service = PT_STLMonitoringService(rabbitmq_config=config["rabbitmq"], influxdb_config=config["influxdb"])
+    service = DT_STLMonitoringService(rabbitmq_config=config["rabbitmq"], influxdb_config=config["influxdb"])
 
     service.setup()
     
-    # Start the PT_STLMonitoringService
+    # Start the DT_STLMonitoringService
     service.start_serving()

@@ -27,12 +27,12 @@ class RFCA:
         for flow in self.flows[:-1]:
             cycle_range = round(abs(flow[3] - flow[2]))
             tmp_list = [cycle[0] for cycle in self.cycles]
-            if cycle_range not in tmp_list:
-                self.cycles.append([cycle_range, 0.5])
-            else:
+            if cycle_range in tmp_list:
                 cycle_idx = tmp_list.index(cycle_range)
                 self.cycles[cycle_idx][1] += 0.5
                 #self._l.info(f"Cycle range: {cycle_range}, Cycle index: {cycle_idx}")
+            elif cycle_range > 0:
+                self.cycles.append([cycle_range, 0.5])
 
             self.cycles = sorted(self.cycles)
             #self._l.info(f"Cycles: {self.cycles}")
