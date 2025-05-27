@@ -14,7 +14,7 @@ fx, fy, fz, mx, my, mz = 1, 2, 3, 4, 5, 6 # force and moment indices
 
 class CalibrationService:
     def __init__(self, model):
-        self._l = logging.getLogger('CalibrationService')
+        self._l = logging.getLogger('logs/CalibrationService')
         self._l.debug("Initialising CalibrationService...")
 
         self.calibration_data = {

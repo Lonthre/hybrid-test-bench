@@ -36,7 +36,7 @@ import numpy as np
 
 class DtHtbDataRecorderInflux:
     def __init__(self, rabbitmq_config, influxdb_config):
-        self._l = logging.getLogger("DT_HTB_DataRecorderInflux")
+        self._l = logging.getLogger("logs/DT_HTB_DataRecorderInflux")
         self._l.info("Initializing DT_HTB_DataRecorderInflux.")
         self._l.info("Connecting to InfluxDB...")    
         client = InfluxDBClient(**influxdb_config)

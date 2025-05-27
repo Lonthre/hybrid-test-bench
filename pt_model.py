@@ -63,7 +63,7 @@ _Iyy3 = _h3 * _b3 ** 3 / 12  # moment of inertia about y-axis [mm4]
 
 class PtModel:
     def __init__(self):
-        self._l = logging.getLogger('PTModel')
+        self._l = logging.getLogger('logs/PTModel')
         self._l.debug("Initialising PT model...")
 
         self.nodes = None

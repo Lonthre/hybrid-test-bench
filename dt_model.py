@@ -63,7 +63,7 @@ _Iyy3 = _h3 * _b3 ** 3 / 12  # moment of inertia about y-axis [mm4]
 
 class DtModel:
     def __init__(self):
-        self._l = logging.getLogger('DTModel')
+        self._l = logging.getLogger('logs/DTModel')
         self._l.debug("Initialising DT model...")
 
         self.nodes = None

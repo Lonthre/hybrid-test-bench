@@ -83,7 +83,7 @@ class ActuatorController:
         #execution_interval: Execution interval for the ODE solver [seconds]
 
         # Set up logging
-        self._l = logging.getLogger("Actuator")
+        self._l = logging.getLogger("logs/Actuator")
         self._l.info("Initializing ActuatorController.")
 
         self.step = 0

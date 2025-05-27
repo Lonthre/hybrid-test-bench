@@ -15,7 +15,7 @@ class Rabbitmq:
                  type,
                  ssl = None,
                  ):
-        self._l = logging.getLogger("RabbitMQClass")
+        self._l = logging.getLogger("logs/RabbitMQClass")
         self.vhost = vhost
         self.exchange_name = exchange
         self.exchange_type = type
