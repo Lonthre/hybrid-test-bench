@@ -587,7 +587,7 @@ class DtModel:
                     self.BTW_U_scale[idx] = scale
             #self._l.debug("Old displacement: %s, New displacement: %s", U0, U)
             F = U0 * scale  # force [N]
-            self._l.debug("Force needed for set displacement. F: %s --> U:", F, U0)
+            #self._l.debug("Force needed for set displacement. F: %s --> U:", F, U0)
             self.set_loads_between_nodes(F, nodes)
         #self._l.debug("Loads updated from displacements between nodes.")
         return F, U0, U

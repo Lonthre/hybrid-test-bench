@@ -167,15 +167,15 @@ class DTService:
 
         # Additional logic for the DT can go here
         if self._force_on == 1.0:
-            self._l.info(f"State received: {self.state_received}.")
+            #self._l.info(f"State received: {self.state_received}.")
             if self.state_received:
                 rload = self.PT_Model_h_f
                 rdisplacement = self.PT_Model_v_d
                 try:
                     load = self.H_ac.get_state() # Get the load from the actuator controller
                     displacement = self.V_ac.get_state() # Get the displacement from the actuator controller
-                    self._l.info(f"Load: {load}, Displacement: {displacement}")
-                    self._l.info(f"PT Model Load: {rload}, PT Model Displacement: {rdisplacement}")
+                    #self._l.info(f"Load: {load}, Displacement: {displacement}")
+                    #self._l.info(f"PT Model Load: {rload}, PT Model Displacement: {rdisplacement}")
 
                     if abs(load-rload) > 0.1*self.lh_wanted:
                         self._l.warning(f"Load difference: {round(abs(load-rload),2)} > {self.lh_wanted * 0.1}")
@@ -188,8 +188,8 @@ class DTService:
                     pfload, lfault = self.H_ac.pf_state(rload)
                     pfdisplacement, dfault = self.V_ac.pf_state(rdisplacement)
                     
-                    self._l.info(f"PF Load: {pfload}, PF Displacement: {pfdisplacement}")
-                    self._l.info(f"PF Load Fault: {lfault}, PF Displacement Fault: {dfault}")
+                    #self._l.info(f"PF Load: {pfload}, PF Displacement: {pfdisplacement}")
+                    #self._l.info(f"PF Load Fault: {lfault}, PF Displacement Fault: {dfault}")
 
                 except Exception as e:
                     self._l.error("Failed to emulate PT behavior: %s", e, exc_info=True)
@@ -209,8 +209,8 @@ class DTService:
                 except Exception as e:
                     self._l.error("Calibration service failed: %s", e, exc_info=True)
                     raise
-            else:
-                self._l.warning("No state received from PT model. Using default values.")
+            #else:
+                #self._l.warning("No state received from PT model. Using default values.")
             
             try:
                 load = self.H_ac.step_simulation()
@@ -333,8 +333,8 @@ if __name__ == "__main__":
         uv_initial = 0.0,
         lh_initial = 0.0,
         lv_initial = 0.0,
-        max_vertical_displacement = 15.0,
-        min_e_modulus = 70e3, # Should be adjusted to 50.000 MPa, or 60.000 MPa - but, for now we use 70.000 MPa, 
+        max_vertical_displacement = 70.0,
+        min_e_modulus = 70e3 # Should be adjusted to 50.000 MPa, or 60.000 MPa - but for now we use 70.000 MPa, 
             # so we can show the monitoring and the reconfiguration of the DT model working.
         execution_interval = 3.0,
         rabbitmq_config=config["rabbitmq"])
