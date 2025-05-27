@@ -348,7 +348,7 @@ class PtModel:
         return self.elements[element - 1]
 
     def set_beampars(self, element, beampars, values):
-        self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
+        self._logger.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
         # Set the beam parameters for the model
         # beampars - beam parameters [mm]
         beam = self.elements[element - 1]
@@ -385,7 +385,7 @@ class PtModel:
                         self._logger.error("Beam parameters not set. %s", par)
                         raise ValueError("Beam parameters not set. %s" % par)
 
-            self._l.debug("Beam parameters set. %s", beam3d_pars)
+            self._logger.debug("Beam parameters set. %s", beam3d_pars)
             self.elements[element - 1] = (beam3d(self.nodes, beam3d_pars))
 
         else:
@@ -446,6 +446,7 @@ class PtModel:
             delta_sigma_Ed = cycle[0] * _lb3 * _h3 / 2 / _Ixx3  # M = F * a, sigma = M/W, W = I/y, [N/mm2]
             m1 = 5  # first slope parameter of the fatigue resistance curve - EUC3-1-9 Figure 8.1a
             m2 = 9  # slope parameter of the extende fatigue resistance curve - EUC3-1-9 Figure 8.1a
+
             if delta_sigma_Ed >= delta_sigma_D / gamma_Mf:
                 N_Rd = 2 * 10e6 * (delta_sigma_C * gamma_Mf / delta_sigma_Ed) ** m1
             elif delta_sigma_L / gamma_Mf <= delta_sigma_D <= delta_sigma_D / gamma_Mf:
@@ -453,8 +454,9 @@ class PtModel:
             else:
                 N_Rd = 0
             D = D + N_Ed / N_Rd  # Damage - EUROCODE 3-1-9 (A.6)
+
         fatigue_scale = 1e8
-        E = self.get_beampars(16).E * (1 - D * fatigue_scale)
+        # E = self.get_beampars(16).E * (1 - D * fatigue_scale)
         E = 70e3 * (1 - D * fatigue_scale)  # Young's modulus [N/mm2]
         self.set_beampars(16, 'E', E)
         self._logger.debug("Fatigue damage: %s, E-Module %s", D, E)
@@ -519,7 +521,7 @@ class PtModel:
         # self._setup_model()
 
     def set_displacements_between_nodes(self, U, nodes):
-        self._l.debug("Setting displacements between nodes. u: %s, nodes: %s", U, nodes)
+        self._logger.debug("Setting displacements between nodes. u: %s, nodes: %s", U, nodes)
         self.run_simulation()  # Ensure the model is up to date before setting displacements
         # Set the displacements for the model
         # t - time [s]
@@ -546,8 +548,9 @@ class PtModel:
                 node2 = node[1]
                 if not len(self.BTW_U) == 0:
                     BTW_idx = \
-                    np.where((node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[
-                        0]
+                        np.where(
+                            (node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[
+                            0]
                 else:
                     BTW_idx = []
 
@@ -569,10 +572,10 @@ class PtModel:
                     U0 = self.BTW_U[BTW_idx[0]]
                     U1 = self.get_displacement_between_nodes(node1, node2)
                     if not U1 == 0:
-                        self._l.debug("Correcting scale")
+                        self._logger.debug("Correcting scale")
                         scale = scale * (U0 / U1)
                     if abs(U0 - U1) > U[-i] * 0.1:
-                        self._l.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
+                        self._logger.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
 
                     self.BTW_U_scale[BTW_idx[0]] = scale
                     self.BTW_U[BTW_idx[0]] = U[_i]  # displacement [mm]
@@ -583,9 +586,9 @@ class PtModel:
                 F = U[_i] * scale  # scale force [N]
 
                 if isnan(F):
-                    self._l.warning("Force is NaN. %s", F)
+                    self._logger.warning("Force is NaN. %s", F)
                     F = 1  # default force [N]
-                self._l.debug("Force needed for set displacement. %s", F)
+                self._logger.debug("Force needed for set displacement. %s", F)
 
                 try:
                     self.set_loads_between_nodes(F, nodes[_i])
@@ -597,7 +600,7 @@ class PtModel:
             self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s",
                                np.shape(U), np.shape(nodes))
             raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (
-            np.shape(U), np.shape(nodes)))
+                np.shape(U), np.shape(nodes)))
 
         # self._l.debug("Displacement between nodes. %s", nodes)
 
@@ -623,7 +626,7 @@ class PtModel:
             self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s",
                                np.shape(nodes), np.shape(direction))
             raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (
-            np.shape(nodes), np.shape(direction)))
+                np.shape(nodes), np.shape(direction)))
 
         self._logger.debug("Displacement: %s", us)
 
@@ -653,10 +656,10 @@ class PtModel:
             dof2 = self.model.find_dofs([[node2, d + 1]]).squeeze()
             ulok[d] = self.u[dof1, 1] - self.u[dof2, 1]  # local displacement [mm]
         L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0]) ** 2 + (xyz1[1] - xyz2[1] + ulok[1]) ** 2 + (
-                    xyz1[2] - xyz2[2] + ulok[2]) ** 2)  # length [mm]
+                xyz1[2] - xyz2[2] + ulok[2]) ** 2)  # length [mm]
         delta_l = L1 - L0  # deltaL [mm]
 
-        self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
+        self._logger.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
         return L0, L1, delta_l
 
     def get_displacements(self):
@@ -730,7 +733,6 @@ class PtModel:
                         # self._l.debug("Existing load [fs]. %s - %s", np.shape(self._fs), self._fs)
                 # else:
                 # self._l.debug("Skipping load. %s, %s, %s", f[_i], nodes[_i], direction[_i])
-
 
         else:
             self._logger.error(
