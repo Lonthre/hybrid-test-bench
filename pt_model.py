@@ -91,7 +91,6 @@ class PtModel:
         self._setup_model()
         self.run_simulation()
 
-
     # nodal parameters (x, y, z)
     def _setup_nodes(self):
         self._logger.debug("Setting up nodes.")
@@ -352,9 +351,9 @@ class PtModel:
         self._l.debug("Setting beam parameters. Beam(%s): %s = %s", element, beampars, values)
         # Set the beam parameters for the model
         # beampars - beam parameters [mm]
-        beam = self.elements[element-1]
+        beam = self.elements[element - 1]
 
-         # parameters of the element
+        # parameters of the element
         beam3d_pars = {}
         beam3d_pars['shape'] = 'generic'
         beam3d_pars['A'] = beam.A
@@ -387,7 +386,7 @@ class PtModel:
                         raise ValueError("Beam parameters not set. %s" % par)
 
             self._l.debug("Beam parameters set. %s", beam3d_pars)
-            self.elements[element-1] = (beam3d(self.nodes, beam3d_pars))
+            self.elements[element - 1] = (beam3d(self.nodes, beam3d_pars))
 
         else:
             self._logger.error("Beam parameters and values shape mismatch. Beam parameters shape: %s, Values shape: %s",
@@ -438,25 +437,25 @@ class PtModel:
             # fatigue - [N/mm2]
             gamma_Mf = 1.0
             N_Ed = cycle[1]
-            N_L = 10e8 #number of stress cycles associated with the variable amplitude fatigue limit - EUC3-1-9 Figure 8.1a
-            N_C = 2*10e6 #number of stress cycles associated with the characteristic reference value of fatigue resistance - EUC3-1-9 Figure 8.1a
-            N_D = N_C #number of cycles associated with the characteristic constant amplitude fatigue limit - EUC3-1-9 Figure 8.1a
-            delta_sigma_D = 125 #constant amplitude fatigue limit [N/mm2] - EUC3-1-9 Table A.1
-            delta_sigma_C = delta_sigma_D #reference value at 2*10e6 cycles [N/mm2] - EUC3-1-9 Table A.1
-            delta_sigma_L = 0.647 * delta_sigma_C #variable amplitude fatigue limit [N/mm2] - EUC3-1-9 Figure 8.1a
-            delta_sigma_Ed = cycle[0] * _lb3 * _h3/2/_Ixx3  #M = F * a, sigma = M/W, W = I/y, [N/mm2]
-            m1 = 5 #first slope parameter of the fatigue resistance curve - EUC3-1-9 Figure 8.1a
-            m2 = 9 #slope parameter of the extende fatigue resistance curve - EUC3-1-9 Figure 8.1a
-            if delta_sigma_Ed >= delta_sigma_D/gamma_Mf:
-                N_Rd = 2*10e6*(delta_sigma_C*gamma_Mf/delta_sigma_Ed)**m1
-            elif delta_sigma_L/gamma_Mf <= delta_sigma_D <= delta_sigma_D/gamma_Mf:
-                N_Rd = N_D*(delta_sigma_D*gamma_Mf/delta_sigma_Ed)**m1
+            N_L = 10e8  # number of stress cycles associated with the variable amplitude fatigue limit - EUC3-1-9 Figure 8.1a
+            N_C = 2 * 10e6  # number of stress cycles associated with the characteristic reference value of fatigue resistance - EUC3-1-9 Figure 8.1a
+            N_D = N_C  # number of cycles associated with the characteristic constant amplitude fatigue limit - EUC3-1-9 Figure 8.1a
+            delta_sigma_D = 125  # constant amplitude fatigue limit [N/mm2] - EUC3-1-9 Table A.1
+            delta_sigma_C = delta_sigma_D  # reference value at 2*10e6 cycles [N/mm2] - EUC3-1-9 Table A.1
+            delta_sigma_L = 0.647 * delta_sigma_C  # variable amplitude fatigue limit [N/mm2] - EUC3-1-9 Figure 8.1a
+            delta_sigma_Ed = cycle[0] * _lb3 * _h3 / 2 / _Ixx3  # M = F * a, sigma = M/W, W = I/y, [N/mm2]
+            m1 = 5  # first slope parameter of the fatigue resistance curve - EUC3-1-9 Figure 8.1a
+            m2 = 9  # slope parameter of the extende fatigue resistance curve - EUC3-1-9 Figure 8.1a
+            if delta_sigma_Ed >= delta_sigma_D / gamma_Mf:
+                N_Rd = 2 * 10e6 * (delta_sigma_C * gamma_Mf / delta_sigma_Ed) ** m1
+            elif delta_sigma_L / gamma_Mf <= delta_sigma_D <= delta_sigma_D / gamma_Mf:
+                N_Rd = N_D * (delta_sigma_D * gamma_Mf / delta_sigma_Ed) ** m1
             else:
                 N_Rd = 0
-            D = D + N_Ed/N_Rd #Damage - EUROCODE 3-1-9 (A.6)
+            D = D + N_Ed / N_Rd  # Damage - EUROCODE 3-1-9 (A.6)
         fatigue_scale = 1e8
-        E = self.get_beampars(16).E * (1-D*fatigue_scale)
-        E = 70e3 * (1-D*fatigue_scale) # Young's modulus [N/mm2]
+        E = self.get_beampars(16).E * (1 - D * fatigue_scale)
+        E = 70e3 * (1 - D * fatigue_scale)  # Young's modulus [N/mm2]
         self.set_beampars(16, 'E', E)
         self._logger.debug("Fatigue damage: %s, E-Module %s", D, E)
         return [D, E]
@@ -488,7 +487,7 @@ class PtModel:
         # self._setup_model()
 
     def set_displacements(self, u, nodes, direction):
-        #self._l.debug("Setting displacements. t: %s, u: %s", t, u)
+        # self._l.debug("Setting displacements. t: %s, u: %s", t, u)
         i = np.shape(nodes)[0]
 
         # Set the displacements for the model
@@ -546,44 +545,46 @@ class PtModel:
                 node1 = node[0]
                 node2 = node[1]
                 if not len(self.BTW_U) == 0:
-                    BTW_idx = np.where((node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[0]
+                    BTW_idx = \
+                    np.where((node1 == np.array(self.BTW_U_nodes)[:, 0]) & (node2 == np.array(self.BTW_U_nodes)[:, 1]))[
+                        0]
                 else:
                     BTW_idx = []
 
                 if len(BTW_idx) == 0 or len(self.BTW_U) == 0:
-                    #self._l.debug("Displacement between nodes not found. %s, %s", node1, node2)
-                    F = 1 # default force [N]
-                    self.set_loads_between_nodes(F, node) # set force [N]
-                    self.run_simulation() # run simulation to get the displacement
-                    delta_l = self.get_displacement_between_nodes(node1, node2) # length [mm]
-                    #self._l.debug("U: %s, delta_l: %s", U[_i], delta_l)
-                    scale = np.divide(F,delta_l) # scale factor
-                    self.BTW_U_nodes.append(node) # nodes
-                    self.BTW_U_scale.append(scale) # scale factor
+                    # self._l.debug("Displacement between nodes not found. %s, %s", node1, node2)
+                    F = 1  # default force [N]
+                    self.set_loads_between_nodes(F, node)  # set force [N]
+                    self.run_simulation()  # run simulation to get the displacement
+                    delta_l = self.get_displacement_between_nodes(node1, node2)  # length [mm]
+                    # self._l.debug("U: %s, delta_l: %s", U[_i], delta_l)
+                    scale = np.divide(F, delta_l)  # scale factor
+                    self.BTW_U_nodes.append(node)  # nodes
+                    self.BTW_U_scale.append(scale)  # scale factor
                     self.BTW_U.append(U[_i])
 
                 else:
-                    #self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
+                    # self._l.debug("Displacement between nodes found. %s, %s", node1, node2)
                     scale = self.BTW_U_scale[BTW_idx[0]]
                     U0 = self.BTW_U[BTW_idx[0]]
-                    U1 = self.get_displacement_between_nodes(node1,node2)
+                    U1 = self.get_displacement_between_nodes(node1, node2)
                     if not U1 == 0:
                         self._l.debug("Correcting scale")
-                        scale = scale * (U0/U1)
-                    if abs(U0 - U1) > U[-i]*0.1:
+                        scale = scale * (U0 / U1)
+                    if abs(U0 - U1) > U[-i] * 0.1:
                         self._l.warning("U0: %s exceeds U1: %s with more than 10% of U: %s", U0, U1, U[_i])
 
                     self.BTW_U_scale[BTW_idx[0]] = scale
-                    self.BTW_U[BTW_idx[0]] = U[_i] # displacement [mm]
+                    self.BTW_U[BTW_idx[0]] = U[_i]  # displacement [mm]
 
-                #self._l.debug("BTW_U: %s, BTW_U_nodes: %s, BTW_U_scale: %s", self.BTW_U, self.BTW_U_nodes, self.BTW_U_scale)
-                #self._l.debug("Scale factor for displacement. %s", scale)
+                # self._l.debug("BTW_U: %s, BTW_U_nodes: %s, BTW_U_scale: %s", self.BTW_U, self.BTW_U_nodes, self.BTW_U_scale)
+                # self._l.debug("Scale factor for displacement. %s", scale)
 
-                F = U[_i] * scale # scale force [N]
+                F = U[_i] * scale  # scale force [N]
 
                 if isnan(F):
                     self._l.warning("Force is NaN. %s", F)
-                    F = 1 # default force [N]
+                    F = 1  # default force [N]
                 self._l.debug("Force needed for set displacement. %s", F)
 
                 try:
@@ -593,10 +594,12 @@ class PtModel:
                     raise
 
         else:
-            self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s", np.shape(U), np.shape(nodes))
-            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(U), np.shape(nodes)))
-        
-        #self._l.debug("Displacement between nodes. %s", nodes)
+            self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s",
+                               np.shape(U), np.shape(nodes))
+            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (
+            np.shape(U), np.shape(nodes)))
+
+        # self._l.debug("Displacement between nodes. %s", nodes)
 
     def get_displacement(self, nodes, direction):
         # self._l.debug("Getting displacements. nodes: %s, direction: %s", nodes, direction)
@@ -617,9 +620,11 @@ class PtModel:
                 # self._l.debug("Finding dof. %s, %s", dof, self.u[dof,1])
                 us.append(self.u[dof, 1])  # local displacement [mm]
         else:
-            self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
-            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
-        
+            self._logger.error("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s",
+                               np.shape(nodes), np.shape(direction))
+            raise ValueError("Displacement and node shape mismatch. Displacement shape: %s, Node shape: %s" % (
+            np.shape(nodes), np.shape(direction)))
+
         self._logger.debug("Displacement: %s", us)
 
         noisy_displacements = [num + random.uniform(-self.DISPLACEMENT_NOISE, self.DISPLACEMENT_NOISE) for num in us]
@@ -628,27 +633,28 @@ class PtModel:
             noisy_displacements = noisy_displacements[0]
 
         return noisy_displacements
-    
+
     def get_displacement_between_nodes(self, node1, node2):
         # self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
         # Get the displacements for the model
         return self.get_distance_between_nodes(node1, node2)[2]
 
     def get_distance_between_nodes(self, node1, node2):
-        #self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
+        # self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
         # Get the displacements for the model
 
-        ulok = [0,0,0]
+        ulok = [0, 0, 0]
 
-        xyz1 = self.model.my_nodes.nodal_coords[node1-1]
-        xyz2 = self.model.my_nodes.nodal_coords[node2-1]
-        L0 = sqrt((xyz1[0] - xyz2[0])**2 + (xyz1[1] - xyz2[1])**2 + (xyz1[2] - xyz2[2])**2) # length [mm]
+        xyz1 = self.model.my_nodes.nodal_coords[node1 - 1]
+        xyz2 = self.model.my_nodes.nodal_coords[node2 - 1]
+        L0 = sqrt((xyz1[0] - xyz2[0]) ** 2 + (xyz1[1] - xyz2[1]) ** 2 + (xyz1[2] - xyz2[2]) ** 2)  # length [mm]
         for d in range(3):
-            dof1 = self.model.find_dofs([[node1, d+1]]).squeeze()
-            dof2 = self.model.find_dofs([[node2, d+1]]).squeeze()
-            ulok[d] = self.u[dof1, 1] - self.u[dof2, 1] # local displacement [mm]
-        L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0])**2 + (xyz1[1] - xyz2[1] + ulok[1])**2 + (xyz1[2] - xyz2[2] + ulok[2])**2) # length [mm]
-        delta_l = L1 - L0 # deltaL [mm]
+            dof1 = self.model.find_dofs([[node1, d + 1]]).squeeze()
+            dof2 = self.model.find_dofs([[node2, d + 1]]).squeeze()
+            ulok[d] = self.u[dof1, 1] - self.u[dof2, 1]  # local displacement [mm]
+        L1 = sqrt((xyz1[0] - xyz2[0] + ulok[0]) ** 2 + (xyz1[1] - xyz2[1] + ulok[1]) ** 2 + (
+                    xyz1[2] - xyz2[2] + ulok[2]) ** 2)  # length [mm]
+        delta_l = L1 - L0  # deltaL [mm]
 
         self._l.debug("L0: %s, L1: %s, DeltaL: %s", L0, L1, delta_l)
         return L0, L1, delta_l
@@ -685,7 +691,7 @@ class PtModel:
         # self._setup_model()
 
     def set_loads(self, f, nodes, direction):
-        #self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
+        # self._l.debug("Setting loads. t: %s, f: %s, node: %s, direction: %s", t, f, nodes, direction)
         i = np.shape(nodes)[0]
 
         F_idx = []
@@ -737,7 +743,7 @@ class PtModel:
         # self._setup_model()
 
     def set_loads_between_nodes(self, F, nodes):
-        #self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
+        # self._l.debug("Setting loads between nodes. t: %s, F: %s, node: %s", t, F, nodes)
         # Set the loads for the model
         # t - time [s]
         # F - force [N]
@@ -798,9 +804,9 @@ class PtModel:
 
                 for d in range(3):
                     # Set Loads for the model
-                    flok[d] = float(np.multiply(F, np.divide(llok[d] , l_f))) # load [N]
-                    self.set_loads([flok[d],-flok[d]], nodes[_i], [d+1,d+1])
-                    
+                    flok[d] = float(np.multiply(F, np.divide(llok[d], l_f)))  # load [N]
+                    self.set_loads([flok[d], -flok[d]], nodes[_i], [d + 1, d + 1])
+
         else:
             self._logger.error("Loads and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(F),
                                np.shape(nodes))
@@ -825,18 +831,20 @@ class PtModel:
                 try:
                     F_idx = np.where((node[0] == np.array(self._fn)[:, 0]) & (node[1] == np.array(self._fn)[:, 1]))[0]
                     if self._f[F_idx[0]] is None:
-                        #self._l.error("Load is not set.")
+                        # self._l.error("Load is not set.")
                         fs.append(0.0)
-                        #raise ValueError("Load is not set.")
+                        # raise ValueError("Load is not set.")
                     else:
-                        #self._l.debug("Load is set. %s", self._f[nodes[_i], direction[_i]])
+                        # self._l.debug("Load is set. %s", self._f[nodes[_i], direction[_i]])
                         fs.append(self._f[F_idx[0]])
                 except Exception as e:
                     self._logger.error("Error finding load index: %s", e)
                     fs = [0]
         else:
-            self._logger.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes), np.shape(direction))
-            raise ValueError("Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
+            self._logger.error("Load and node shape mismatch. Load shape: %s, Node shape: %s", np.shape(nodes),
+                               np.shape(direction))
+            raise ValueError(
+                "Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         self._logger.debug("Loads: %s", fs)
 
         noisy_forces = [num + random.uniform(-self.FORCE_NOISE, self.FORCE_NOISE) for num in fs]
@@ -871,5 +879,5 @@ class PtModel:
         except Exception as e:
             self._logger.error("Simulation failed: %s", e)
             raise
-        #self._l.debug("Simulation completed.")
+        # self._l.debug("Simulation completed.")
         return self.u, self.l, self.r
