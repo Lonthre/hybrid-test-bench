@@ -61,6 +61,9 @@ _Iyy3 = _h3 * _b3 ** 3 / 12  # moment of inertia about y-axis [mm4]
 
 class PtModel:
     def __init__(self):
+        self.FORCE_NOISE = 2
+        self.DISPLACEMENT_NOISE = 1
+
         self._logger = logging.getLogger('PTModel')
         self._logger.debug("Initialising PT model...")
 
@@ -572,7 +575,8 @@ class PtModel:
                 np.shape(nodes), np.shape(direction)))
 
         self._logger.debug("Displacement: %s", us)
-        return us
+        noisy_displacements = [num + random.uniform(-self.DISPLACEMENT_NOISE, self.DISPLACEMENT_NOISE) for num in us]
+        return noisy_displacements
 
     def get_displacement_between_nodes(self, node1, node2):
         # self._l.debug("Getting displacements between nodes. nodes: %s & %s", node1, node2)
@@ -778,7 +782,9 @@ class PtModel:
             raise ValueError(
                 "Load and node shape mismatch. Load shape: %s, Node shape: %s" % (np.shape(nodes), np.shape(direction)))
         self._logger.debug("Loads: %s", fs)
-        return fs
+
+        noisy_forces = [num + random.uniform(-self.FORCE_NOISE, self.FORCE_NOISE) for num in fs]
+        return noisy_forces
 
     def get_loads(self):
         self._logger.debug("Getting loads: %s", self._logger)
@@ -808,8 +814,8 @@ class PtModel:
 
         # self._l.debug("Simulation completed.")
 
-        noisy_u = self.u + np.random.uniform(-1, 1, size=self.u.shape)
-        noisy_l = self.l + np.random.uniform(-1, 1, size=self.l.shape)
-        noisy_r = self.r + np.random.uniform(-1, 1, size=self.r.shape)
+        noisy_u = self.u + np.random.uniform(-20, 20, size=self.u.shape)
+        noisy_l = self.l + np.random.uniform(-50, 50, size=self.l.shape)
+        # noisy_r = self.r + np.random.uniform(-1, 1, size=self.r.shape)
 
-        return noisy_u, noisy_l, noisy_r
+        return noisy_u, noisy_l, self.r
