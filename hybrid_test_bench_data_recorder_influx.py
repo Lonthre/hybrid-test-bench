@@ -36,7 +36,7 @@ import numpy as np
 
 class HybridTestBenchDataRecorderInflux:
     def __init__(self, rabbitmq_config, influxdb_config):
-        self._l = logging.getLogger("logs/HybridTestBenchDataRecorderInflux")
+        self._l = logging.getLogger("HybridTestBenchDataRecorderInflux")
         self._l.info("Initializing HybridTestBenchDataRecorderInflux.")
         self._l.info("Connecting to InfluxDB...")    
         client = InfluxDBClient(**influxdb_config)

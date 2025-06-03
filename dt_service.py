@@ -32,7 +32,7 @@ class DTService:
     
     def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, min_e_modulus, execution_interval, rabbitmq_config):
         # Initialize the DTService with initial values and configuration
-        self._l = logging.getLogger("logs/DTService")
+        self._l = logging.getLogger("DTService")
         self._l.info("Initializing DTService.")
 
         self._rabbitmq = Rabbitmq(**rabbitmq_config)

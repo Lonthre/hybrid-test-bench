@@ -33,7 +33,7 @@ class PTEmulatorService:
     
     def __init__(self, uh_initial, uv_initial, lh_initial, lv_initial, max_vertical_displacement, execution_interval, rabbitmq_config):
         # Initialize the PTEmulatorService with initial values and configuration
-        self._l = logging.getLogger("logs/PTEmulatorService")
+        self._l = logging.getLogger("PTEmulatorService")
         self._l.info("Initializing PTEmulatorService.")
 
         self._rabbitmq = Rabbitmq(**rabbitmq_config)
