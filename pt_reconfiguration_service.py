@@ -45,7 +45,7 @@ class PT_ReconfigurationService:
 
         self._client = InfluxDBClient(url=url, token=token, org=self._org)
 
-        self._l = logging.getLogger("logs/PT_ReconfigurationService")
+        self._l = logging.getLogger("PT_ReconfigurationService")
 
         self._force_off_sent = False
         self._last_robustness = None

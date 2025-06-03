@@ -12,7 +12,7 @@ plt.set_loglevel(level='warning')
 
 class RFCA:
     def __init__(self, data):
-        self._l = logging.getLogger("logs/RFCA")
+        self._l = logging.getLogger("RFCA")
         self._l.info("Initializing RFCA.")
         self.step = 0   
         self.flows = []

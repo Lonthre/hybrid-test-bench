@@ -47,7 +47,7 @@ class PT_STLMonitoringService:
 
         self._client = InfluxDBClient(url=url, token=token, org=self._org)
 
-        self._l = logging.getLogger("logs/STLMonitoringService")
+        self._l = logging.getLogger("STLMonitoringService")
 
         # Specification
         self._spec = rtamt.StlDenseTimeSpecification()
